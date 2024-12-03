@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { FilterUserDto } from './dto/filter-user.dto';
+import { decryptText, encrypt } from '@app/utils/helpers';
 
 @Injectable()
 export class UserService {
@@ -17,7 +18,7 @@ export class UserService {
     try {
       const user = new User();
       user.name = createUserDto?.name;
-      user.password = createUserDto?.password;
+      user.password = await encrypt(createUserDto?.password);
       user.document = createUserDto?.document;
       user.email = createUserDto?.email;
       user.telephone = createUserDto?.telephone;
@@ -47,7 +48,6 @@ export class UserService {
     }
     const users = await this.userRepository.find({
       where,
-      // relations: ['orders'],
     });
 
     return users ?? [];
@@ -58,7 +58,10 @@ export class UserService {
   }
 
   async findOne(id: number): Promise<User> {
-    return await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({ where: { id } });
+    user.password = await decryptText(user.password);
+
+    return user;
   }
 
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
@@ -75,7 +78,7 @@ export class UserService {
       if (updateUserDto) {
         userToUpdate.name = updateUserDto?.name || userToUpdate.name;
         userToUpdate.password =
-          updateUserDto?.password || userToUpdate.password;
+          (await encrypt(updateUserDto?.password)) || userToUpdate.password;
         userToUpdate.document =
           updateUserDto?.document || userToUpdate.document;
         userToUpdate.email = updateUserDto?.email || userToUpdate.email;

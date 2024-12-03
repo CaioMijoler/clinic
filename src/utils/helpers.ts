@@ -1,4 +1,6 @@
 import moment from 'moment';
+import { createCipheriv, createDecipheriv } from 'crypto';
+import appConfig from '@app/config/app.config';
 
 const generateScheduling = (): string => {
   const orderPrefix = 'SO';
@@ -14,4 +16,28 @@ const formatZipCode = (zipcode: string): string => {
     .replace(/(-\d{3})\d+?$/, '$1');
 };
 
-export { generateScheduling, formatZipCode };
+const encrypt = async (password: string) => {
+  const algorithm = appConfig().cripto.alg;
+  const key = Buffer.from(appConfig().cripto.secret, 'hex');
+  const iv = Buffer.from(appConfig().cripto.iv, 'hex');
+
+  const cipher = createCipheriv(algorithm, key, iv);
+  let encryptedPayload = cipher.update(password, 'utf8', 'hex');
+  encryptedPayload += cipher.final('hex');
+
+  return encryptedPayload;
+};
+
+const decryptText = async (password) => {
+  const algorithm = appConfig().cripto.alg;
+  const key = Buffer.from(appConfig().cripto.secret, 'hex');
+  const iv = Buffer.from(appConfig().cripto.iv, 'hex');
+
+  const decipher = createDecipheriv(algorithm, key, iv);
+  let decryptedPayload = decipher.update(password, 'hex', 'utf8');
+  decryptedPayload += decipher.final('utf8');
+
+  return decryptedPayload;
+};
+
+export { generateScheduling, formatZipCode, encrypt, decryptText };

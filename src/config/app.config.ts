@@ -30,5 +30,10 @@ export default () => {
     database: {
       ...database,
     },
+    cripto: {
+      alg: process.env.CRIPTO_ALG,
+      secret: process.env.ENCRYPT_SECRET_KEY,
+      iv: process.env.ENCRYPT_IV,
+    },
   };
 };

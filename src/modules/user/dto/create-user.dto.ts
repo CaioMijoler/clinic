@@ -16,7 +16,7 @@ export class CreateUserDto {
   name: string;
 
   @ApiProperty()
-  @IsNotEmpty({ message: ErrorMessages['empty']('Tipo') })
+  @IsNotEmpty({ message: ErrorMessages['empty']('Senha') })
   @IsString({ message: ErrorMessages['string.base']('Senha') })
   password: string;
 

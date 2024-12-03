@@ -9,6 +9,7 @@ import { User } from '../user/entities/user.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
+import { decryptText } from '@app/utils/helpers';
 
 @Injectable()
 export class AuthService {
@@ -28,7 +29,7 @@ export class AuthService {
       );
     }
     try {
-      if (user?.password !== loginDto?.password) {
+      if ((await decryptText(user?.password)) !== loginDto?.password) {
         throw new UnauthorizedException('Usuário ou Senha Inválidos');
       }
 
