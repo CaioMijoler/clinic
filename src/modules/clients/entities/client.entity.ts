@@ -2,9 +2,11 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { ClientAddress } from './client-address.entity';
 
 @Entity('clients')
 export class Client {
@@ -48,4 +50,7 @@ export class Client {
     name: 'updated_at',
   })
   updatedAt: string;
+
+  @OneToOne(() => ClientAddress, (address) => address.client, { cascade: true })
+  clientAddress?: ClientAddress;
 }

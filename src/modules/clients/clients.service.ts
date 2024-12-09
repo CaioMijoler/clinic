@@ -64,6 +64,7 @@ export class ClientsService {
   async findOne(id: number): Promise<Client> {
     return await this.clientRepository.findOne({
       where: { id },
+      relations: { clientAddress: true },
     });
   }
 
@@ -74,15 +75,22 @@ export class ClientsService {
     try {
       let client = await this.clientRepository.findOne({
         where: { id },
+        relations: { clientAddress: true },
       });
 
       if (!client) {
         throw new BadRequestException('Não conseguimos encontrar o cliente.');
       }
 
+      client.clientAddress = {
+        ...client.clientAddress,
+        ...updateClientDto.clientAddress,
+      };
+
       client = {
         ...client,
         ...updateClientDto,
+        clientAddress: client.clientAddress,
       };
 
       return await this.clientRepository.save(client);
