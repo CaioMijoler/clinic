@@ -81,7 +81,10 @@ export class MedicalRecordService {
 
           return {
             ...medicalData,
-            client: newClient,
+            client: {
+              ...newClient,
+              clientAddress: newClient.clientAddress,
+            },
             medicalRecordPathologies: newPathologies,
             treatments: newTreatments,
             medicalRecordQuestions: newQuestions,
@@ -107,11 +110,14 @@ export class MedicalRecordService {
     queryParams: FilterDto,
   ): Promise<IPaginate<MedicalRecordResponseDto> | MedicalRecordResponseDto[]> {
     try {
-      return findAllWithQueryBuilder<MedicalRecord>(
+      const data = await findAllWithQueryBuilder<MedicalRecord>(
         this.medicalRecordRepository,
         queryParams,
         'mr',
       );
+      return data as
+        | IPaginate<MedicalRecordResponseDto>
+        | MedicalRecordResponseDto[];
     } catch (error) {
       const message = 'Ocorreu um erro ao buscar os prontuários.';
       Logger.error(message, error?.stack ?? error.message);
@@ -120,7 +126,7 @@ export class MedicalRecordService {
   }
 
   async findOne(id: number): Promise<MedicalRecordResponseDto> {
-    return await this.medicalRecordRepository.findOne({
+    const data = await this.medicalRecordRepository.findOne({
       where: { id },
       relations: [
         'feedbacks',
@@ -132,6 +138,8 @@ export class MedicalRecordService {
         'treatments',
       ],
     });
+
+    return data as MedicalRecordResponseDto;
   }
 
   async update(
@@ -212,7 +220,7 @@ export class MedicalRecordService {
         },
       );
 
-      return dataSourceResponse;
+      return dataSourceResponse as MedicalRecordResponseDto;
     } catch (error) {
       const message = 'Ocorreu um erro ao atualizar o prontuário.';
 

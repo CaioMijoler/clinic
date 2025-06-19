@@ -6,11 +6,17 @@ import {
   Param,
   Delete,
   Put,
+  Query,
 } from '@nestjs/common';
 import { QuestionsService } from './questions.service';
-import { CreateQuestionDto } from './dto/create-question.dto';
+import {
+  CreateQuestionDto,
+  ResponseQuestionDto,
+} from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FilterDto } from '@app/utils/filter-dto';
+import { IPaginate } from '@app/utils/paginate';
 
 @ApiTags('questions')
 @Controller('v1/questions')
@@ -24,8 +30,10 @@ export class QuestionsController {
   }
 
   @Get()
-  async findAll() {
-    return await this.questionsService.findAll();
+  async findAll(
+    @Query() queryParams: FilterDto,
+  ): Promise<IPaginate<ResponseQuestionDto> | ResponseQuestionDto[]> {
+    return await this.questionsService.findAll(queryParams);
   }
 
   @Get(':id')

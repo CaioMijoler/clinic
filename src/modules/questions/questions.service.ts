@@ -12,6 +12,9 @@ import { UpdateQuestionDto } from './dto/update-question.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Question } from './entities/question.entity';
+import { FilterDto } from '@app/utils/filter-dto';
+import { findAllWithQueryBuilder } from '@app/utils/query-builder';
+import { IPaginate } from '@app/utils/paginate';
 
 @Injectable()
 export class QuestionsService {
@@ -38,8 +41,21 @@ export class QuestionsService {
     }
   }
 
-  async findAll(): Promise<ResponseQuestionDto[]> {
-    return await this.questionRepository.find();
+  async findAll(
+    queryParams: FilterDto,
+  ): Promise<IPaginate<ResponseQuestionDto> | ResponseQuestionDto[]> {
+    try {
+      const data = await findAllWithQueryBuilder<Question>(
+        this.questionRepository,
+        queryParams,
+        'quest',
+      );
+      return data as IPaginate<ResponseQuestionDto> | ResponseQuestionDto[];
+    } catch (error) {
+      const message = 'Ocorreu um erro ao buscar as questões.';
+      Logger.error(message, error?.stack ?? error.message);
+      throw new BadRequestException(message);
+    }
   }
 
   async findOne(id: number): Promise<ResponseQuestionDto> {
