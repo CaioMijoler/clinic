@@ -20,12 +20,6 @@ export class Clients1714602978514 implements MigrationInterface {
             isNullable: true,
           },
           {
-            name: 'address',
-            type: 'varchar',
-            length: '255',
-            isNullable: true,
-          },
-          {
             name: 'document',
             type: 'varchar',
             length: '20',

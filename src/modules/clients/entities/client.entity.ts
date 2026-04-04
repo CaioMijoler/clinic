@@ -21,9 +21,6 @@ export class Client {
   })
   name: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  address: string;
-
   @Column({ type: 'varchar', length: 20 })
   document: string;
 

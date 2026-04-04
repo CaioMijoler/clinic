@@ -63,12 +63,6 @@ export class CreateClientDto {
   document: string;
 
   @ApiProperty()
-  @IsString({ message: ErrorMessages['string.base']('Endereço') })
-  @MaxLength(255, { message: ErrorMessages['string.max']('Endereço', 255) })
-  @IsOptional()
-  address: string;
-
-  @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('IE/RG') })
   @MaxLength(20, { message: ErrorMessages['string.max']('IE/RG', 20) })
   @Transform(({ value }: TransformFnParams) => value?.replace(/[./-]/g, ''))

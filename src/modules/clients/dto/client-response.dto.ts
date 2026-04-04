@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { CreateClientOrUpdateAddressDto } from './create-client.dto';
 
 export class ClientResponseDto {
   @ApiProperty({ example: 1 })
@@ -6,9 +7,6 @@ export class ClientResponseDto {
 
   @ApiProperty()
   name: string;
-
-  @ApiProperty()
-  address: string;
 
   @ApiProperty()
   document: string;
@@ -27,4 +25,7 @@ export class ClientResponseDto {
 
   @ApiProperty({ example: '2021-12-01T23:59:59.000Z' })
   updatedAt: string;
+
+  @ApiProperty({ type: () => CreateClientOrUpdateAddressDto, nullable: true })
+  clientAddress?: CreateClientOrUpdateAddressDto;
 }

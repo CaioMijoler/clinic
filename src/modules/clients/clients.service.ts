@@ -49,9 +49,18 @@ export class ClientsService {
 
   async findAll(queryParams: FilterDto): Promise<IPaginate<Client> | Client[]> {
     try {
+      const params = { ...queryParams };
+      if (params.relations) {
+        if (!params.relations.includes('clientAddress')) {
+          params.relations += ',clientAddress';
+        }
+      } else {
+        params.relations = 'clientAddress';
+      }
+
       return findAllWithQueryBuilder<Client>(
         this.clientRepository,
-        queryParams,
+        params,
         'client',
       );
     } catch (error) {
