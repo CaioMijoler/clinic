@@ -51,12 +51,18 @@ export class MedicalRecordService {
       const dataSourceResponse = await this.dataSource.transaction(
         async (manager) => {
           const auth = await this.validateUser(manager, user);
-          const newClient = await this.createOrUpdateClient(manager, client);
+
+          let newClient = null;
+          if (client) {
+            newClient = await this.createOrUpdateClient(manager, client);
+          }
+
+          const finalClientId = newClient?.id || medicalRecordData.clientId;
 
           const medicalData = await manager.save(MedicalRecord, {
             ...medicalRecordData,
             userId: auth?.id,
-            clientId: newClient?.id,
+            clientId: finalClientId,
             status: MedicalRecordStatusEnum.CREATED,
           });
 
@@ -81,10 +87,12 @@ export class MedicalRecordService {
 
           return {
             ...medicalData,
-            client: {
-              ...newClient,
-              clientAddress: newClient.clientAddress,
-            },
+            client: newClient
+              ? {
+                  ...newClient,
+                  clientAddress: newClient.clientAddress,
+                }
+              : null,
             medicalRecordPathologies: newPathologies,
             treatments: newTreatments,
             medicalRecordQuestions: newQuestions,
@@ -289,6 +297,7 @@ export class MedicalRecordService {
     manager: EntityManager,
     clientDto: CreateClientDto,
   ) {
+    if (!clientDto) return null;
     const createdClient =
       clientDto?.document &&
       (await manager.findOne(Client, {
