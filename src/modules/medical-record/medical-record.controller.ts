@@ -21,7 +21,7 @@ import { FilterDto } from '../../utils/filter-dto';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('medical-record')
-@Controller('v1/medical-record')
+@Controller('v1/medical-records')
 @ApiBearerAuth()
 export class MedicalRecordController {
   constructor(private readonly medicalRecordService: MedicalRecordService) {}
