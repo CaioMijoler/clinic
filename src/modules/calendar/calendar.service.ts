@@ -94,16 +94,30 @@ export class CalendarService {
 
       return response['data'];
     } catch (error) {
-      const message = `Ocorreu um erro ao criar o evento. Mais Detalhes: ${JSON.stringify(error?.errors) ?? error?.response?.message}`;
+      const err = error as any;
+      const message = `Ocorreu um erro ao criar o evento. Mais Detalhes: ${JSON.stringify(err?.errors) ?? err?.response?.message}`;
+      if (error instanceof HttpException) throw error;
+      Logger.error(message, err?.stack ?? err?.message);
       throw new BadRequestException(message);
     }
   }
 
   async findAll(queryParams: FilterCalendarDto, user: User) {
     try {
+      const userAuth = await this.dataSource.manager.findOne(User, {
+        where: { id: user.id },
+        select: ['id', 'name', 'credentials', 'calendarId'],
+      });
+
+      if (!userAuth) {
+        throw new NotFoundException('Não conseguimos encontrar o solicitante.');
+      }
+
+      await this.googleAuth(userAuth);
+
       const response = await this.calendar.events.list({
         auth: this.auth,
-        calendarId: user.calendarId,
+        calendarId: userAuth.calendarId,
         timeMin: queryParams.start,
         timeMax: queryParams.end,
         timeZone: 'America/Sao_Paulo',
@@ -113,12 +127,23 @@ export class CalendarService {
       return items;
     } catch (error) {
       const message = 'Ocorreu um erro ao buscar os eventos.';
+      if (error instanceof HttpException) throw error;
+      Logger.error(message, (error as any)?.stack ?? (error as any)?.message);
       throw new BadRequestException(message);
     }
   }
 
   async remove(eventId: string, user: User) {
     try {
+      const userAuth = await this.dataSource.manager.findOne(User, {
+        where: { id: user.id },
+        select: ['id', 'name', 'credentials', 'calendarId'],
+      });
+
+      if (!userAuth) {
+        throw new NotFoundException('Não conseguimos encontrar o solicitante.');
+      }
+
       const medicalRecord = await this.medicalRecordRepository.findOne({
         where: { calendarGoogleId: eventId },
       });
@@ -129,9 +154,11 @@ export class CalendarService {
         );
       }
 
+      await this.googleAuth(userAuth);
+
       const response = await this.calendar.events.delete({
         auth: this.auth,
-        calendarId: user.calendarId,
+        calendarId: userAuth.calendarId,
         eventId: eventId,
       });
 
@@ -151,7 +178,7 @@ export class CalendarService {
         throw error;
       }
 
-      Logger.error(message, error?.stack ?? error.message);
+      Logger.error(message, (error as any)?.stack ?? (error as any)?.message);
 
       throw new BadRequestException(message);
     }
