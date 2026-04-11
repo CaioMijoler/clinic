@@ -26,12 +26,7 @@ export class CalendarService {
     @InjectRepository(MedicalRecord)
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
     private readonly configService: ConfigService,
-  ) {
-    // const CREDENTIALS = JSON.parse(
-    //   this.configService.get<string>('calendar.credentials'),
-    // );
-    //
-  }
+  ) { }
 
   async create(createCalendarDto: CreateCalendarDto, user: User) {
     try {
@@ -72,25 +67,26 @@ export class CalendarService {
           };
         },
       );
-
+      console.log(dataSourceResponse.user.calendarId)
+      console.log(calendarData)
       const response = await this.calendar.events.insert({
         calendarId: dataSourceResponse.user.calendarId,
         resource: calendarData,
       });
 
-      const payloadMedicalOrder = await this.createPayloadOrder(
-        dataSourceResponse.calendar,
-      );
-      await this.medicalRecordRepository.update(
-        dataSourceResponse.calendar.medicalRecordId,
-        {
-          title: payloadMedicalOrder.title,
-          startDate: payloadMedicalOrder.startDate,
-          endDate: payloadMedicalOrder.endDate,
-          calendarGoogleId: response['data']['id'],
-          status: MedicalRecordStatusEnum.SCHEDULED,
-        },
-      );
+      // const payloadMedicalOrder = await this.createPayloadOrder(
+      //   dataSourceResponse.calendar,
+      // );
+      // await this.medicalRecordRepository.update(
+      //   dataSourceResponse.calendar.medicalRecordId,
+      //   {
+      //     title: payloadMedicalOrder.title,
+      //     startDate: payloadMedicalOrder.startDate,
+      //     endDate: payloadMedicalOrder.endDate,
+      //     calendarGoogleId: response['data']['id'],
+      //     status: MedicalRecordStatusEnum.SCHEDULED,
+      //   },
+      // );
 
       return response['data'];
     } catch (error) {

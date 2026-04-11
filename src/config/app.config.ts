@@ -18,9 +18,7 @@ export default () => {
     port: process.env.PORT ?? 3000,
     logInjection: process.env.LOG_INJECTION ?? true,
     calendar: {
-      id: process.env.CALENDAR_ID,
-      url: process.env.CALENDAR_URL,
-      credentials: process.env.CREDENTIALS,
+      url: process.env.CALENDAR_URL
     },
     whatsapp: {
       url: process.env.WHATSAPP_URL,
