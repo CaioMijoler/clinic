@@ -74,19 +74,19 @@ export class CalendarService {
         resource: calendarData,
       });
 
-      // const payloadMedicalOrder = await this.createPayloadOrder(
-      //   dataSourceResponse.calendar,
-      // );
-      // await this.medicalRecordRepository.update(
-      //   dataSourceResponse.calendar.medicalRecordId,
-      //   {
-      //     title: payloadMedicalOrder.title,
-      //     startDate: payloadMedicalOrder.startDate,
-      //     endDate: payloadMedicalOrder.endDate,
-      //     calendarGoogleId: response['data']['id'],
-      //     status: MedicalRecordStatusEnum.SCHEDULED,
-      //   },
-      // );
+      const payloadMedicalOrder = await this.createPayloadOrder(
+        dataSourceResponse.calendar,
+      );
+      await this.medicalRecordRepository.update(
+        dataSourceResponse.calendar.medicalRecordId,
+        {
+          title: payloadMedicalOrder.title,
+          startDate: payloadMedicalOrder.startDate,
+          endDate: payloadMedicalOrder.endDate,
+          calendarGoogleId: response['data']['id'],
+          status: MedicalRecordStatusEnum.SCHEDULED,
+        },
+      );
 
       return response['data'];
     } catch (error) {
