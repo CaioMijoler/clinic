@@ -25,6 +25,7 @@ DB_NAME=clinical
 DB_USER=gabriel
 DB_PASSWORD=Gsm302554
 PORT=3001
+JWT_SECRET=seu-secret-jwt-aqui
 
 # DB_HOST=bzeu6loslws75rkcbz1f-mysql.services.clever-cloud.com
 # DB_NAME=bzeu6loslws75rkcbz1f

@@ -63,6 +63,9 @@ PORT=3000
 ENV=dev
 LOG_LEVEL=debug
 
+# JWT — secret para assinar e verificar tokens
+JWT_SECRET=seu-secret-jwt-aqui
+
 # Banco de dados MySQL
 DB_HOST=localhost
 DB_PORT=3306
@@ -79,7 +82,7 @@ WHATSAPP_PHONE_NUMBER_ID=seu-phone-number-id
 WHATSAPP_ACCESS_TOKEN=seu-access-token
 
 # Criptografia de senha
-CRIPTO_ALG=aes-256-cbc
+CRIPTO_ALG=aes-256-ctr
 ENCRYPT_SECRET_KEY=sua-chave-secreta
 ENCRYPT_IV=seu-iv
 ```

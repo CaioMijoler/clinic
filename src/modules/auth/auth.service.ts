@@ -36,7 +36,7 @@ export class AuthService {
       const payload = { sub: user.id, email: user.email };
 
       const access_token = await this.jwtService.sign(payload, {
-        secret: 'topSecret512',
+        secret: process.env.JWT_SECRET,
         expiresIn: '1 days',
       });
 
@@ -82,7 +82,7 @@ export class AuthService {
     try {
       const token = this.extractTokenFromHeader(accessToken);
       await this.jwtService.verify(token, {
-        secret: 'topSecret512',
+        secret: process.env.JWT_SECRET,
       });
 
       const user = await this.userRepository.findOne({

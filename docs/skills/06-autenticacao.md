@@ -9,7 +9,7 @@
    AuthService.auth()
        ├── Busca user por email
        ├── Descriptografa senha (decryptText) e compara
-       ├── Gera JWT (secret: 'topSecret512', expiresIn: '1 days')
+       ├── Gera JWT (secret: process.env.JWT_SECRET, expiresIn: '1 days')
        ├── Salva token no campo users.token
        └── Retorna user sem password + token
 
@@ -18,7 +18,7 @@
        ▼
    AuthMiddleware → AuthService.verifyToken()
        ├── Extrai token do header (Bearer prefix)
-       ├── jwtService.verify(token, { secret: 'topSecret512' })
+       ├── jwtService.verify(token, { secret: process.env.JWT_SECRET })
        ├── Busca user por users.token = token (token ativo)
        └── Injeta user em req.user
 
@@ -39,9 +39,9 @@
 
 ```typescript
 // Configuração em app.config.ts → env vars necessárias:
-CRIPTO_ALG=...        // algoritmo (ex: aes-256-cbc)
+CRIPTO_ALG=...         // algoritmo (ex: aes-256-ctr)
 ENCRYPT_SECRET_KEY=... // chave de criptografia
-ENCRYPT_IV=...        // vetor de inicialização
+ENCRYPT_IV=...         // vetor de inicialização
 ```
 
 ## Acesso ao Usuário Autenticado nos Controllers
@@ -80,14 +80,11 @@ POST   /v1/user         → criação de usuário (onboarding)
 ## Variáveis de Ambiente de Segurança
 
 ```bash
-# JWT
-# (secret hardcoded em auth.service.ts: 'topSecret512' — verificar se deve migrar para env)
+# JWT — secret usado para assinar e verificar tokens
+JWT_SECRET=seu-secret-jwt-aqui
 
-# Criptografia
-CRIPTO_ALG=aes-256-cbc
+# Criptografia de senha
+CRIPTO_ALG=aes-256-ctr
 ENCRYPT_SECRET_KEY=sua-chave-aqui
 ENCRYPT_IV=seu-iv-aqui
 ```
-
-> ⚠️ **Atenção**: O secret JWT `'topSecret512'` está hardcoded no `auth.service.ts`.
-> Migrar para variável de ambiente `JWT_SECRET` ao refatorar segurança.
