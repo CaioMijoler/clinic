@@ -1,93 +1,277 @@
-# Project Paulo
+# 🏥 Clinic Backend — Sistema de Gestão Clínica
 
+Backend do sistema de gestão para clínica médica, desenvolvido em **NestJS + TypeORM + MySQL**.
+Gerencia o ciclo completo do paciente: cadastro, prontuário, agendamento, tratamento e comunicação via WhatsApp.
 
+---
 
-## Getting started
+## 📋 Funcionalidades
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+| Módulo | Descrição |
+|---|---|
+| **Pacientes** | Cadastro completo com endereço, CPF, RG, email e telefone |
+| **Prontuário** | Registro de sintomas, exame clínico, patologias, tratamento e conclusão |
+| **Agendamento** | Integração com **Google Calendar** para agendamento de consultas |
+| **Patologias** | Cadastro de CIDs para vinculação ao prontuário |
+| **Tratamento** | Passo a passo do tratamento associado ao prontuário |
+| **Feedback** | Coleta de feedback do paciente sobre o tratamento |
+| **Perguntas (Psicanálise)** | Guia de perguntas pré-cadastradas vinculadas ao prontuário |
+| **WhatsApp** | Envio de mensagens via **WhatsApp Business API** |
+| **Autenticação** | Login/logout com JWT (sessão única por usuário) |
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+---
 
-## Add your files
+## 🛠️ Stack Tecnológica
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+- **Framework:** NestJS v10
+- **ORM:** TypeORM v0.3
+- **Banco de Dados:** MySQL
+- **Autenticação:** JWT (`@nestjs/jwt`)
+- **Documentação API:** Swagger (`@nestjs/swagger`)
+- **Validação:** `class-validator` + `class-transformer`
+- **Integrações:** Google Calendar API, WhatsApp Business API
+- **Linguagem:** TypeScript
+
+---
+
+## 🚀 Configuração e Instalação
+
+### Pré-requisitos
+
+- Node.js >= 18
+- Docker e Docker Compose
+- Yarn
+
+### 1. Clonar o repositório
+
+```bash
+git clone https://gitlab.com/caio.mijoler/project-paulo.git
+cd project-paulo
+```
+
+### 2. Configurar variáveis de ambiente
+
+```bash
+cp ".env example" .env
+```
+
+Edite o `.env` com os valores do seu ambiente:
+
+```env
+# Aplicação
+PORT=3000
+ENV=dev
+LOG_LEVEL=debug
+
+# Banco de dados MySQL
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=clinic
+DB_USER=root
+DB_PASSWORD=sua-senha
+
+# Google Calendar (Service Account)
+CALENDAR_URL=https://www.googleapis.com/auth/calendar
+
+# WhatsApp Business API
+WHATSAPP_URL=https://graph.facebook.com/v17.0
+WHATSAPP_PHONE_NUMBER_ID=seu-phone-number-id
+WHATSAPP_ACCESS_TOKEN=seu-access-token
+
+# Criptografia de senha
+CRIPTO_ALG=aes-256-cbc
+ENCRYPT_SECRET_KEY=sua-chave-secreta
+ENCRYPT_IV=seu-iv
+```
+
+### 3. Subir o banco de dados
+
+```bash
+docker-compose up -d
+```
+
+### 4. Instalar dependências
+
+```bash
+yarn install
+```
+
+### 5. Rodar as migrations
+
+```bash
+npm run migrations:run
+```
+
+### 6. Iniciar o servidor
+
+```bash
+# Desenvolvimento (com hot reload)
+yarn dev
+
+# Produção
+yarn start:prod
+```
+
+A API estará disponível em `http://localhost:3000`.
+Documentação Swagger em `http://localhost:3000/api`.
+
+---
+
+## 📦 Estrutura do Projeto
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/caio.mijoler/project-paulo.git
-git branch -M main
-git push -uf origin main
+src/
+├── app.module.ts           # Módulo raiz
+├── main.ts                 # Bootstrap da aplicação
+├── config/                 # Configuração centralizada via env vars
+├── database/               # Configuração TypeORM + migrations
+├── middleware/             # Auth middleware (JWT) + Logger middleware
+├── utils/                  # Utilitários: filtros, paginação, validação
+├── whatsapp/               # Integração WhatsApp Business API
+└── modules/
+    ├── auth/               # Login / Logout / Verify token
+    ├── user/               # Cadastro de usuários (médicos/assistentes)
+    ├── clients/            # Cadastro de pacientes
+    ├── medical-record/     # Prontuário (módulo central)
+    ├── calendar/           # Agendamento via Google Calendar
+    ├── pathologies/        # Cadastro de patologias (CID)
+    ├── questions/          # Guia de perguntas de psicanálise
+    ├── treatment/          # Passos do tratamento
+    ├── feedback/           # Feedback do tratamento
+    └── health/             # Health check endpoint
 ```
 
-## Integrate with your tools
+Cada módulo segue a estrutura padrão NestJS:
+```
+<modulo>/
+├── <modulo>.module.ts
+├── <modulo>.controller.ts
+├── <modulo>.service.ts
+├── dto/
+│   ├── create-<modulo>.dto.ts
+│   └── update-<modulo>.dto.ts
+└── entities/
+    └── <modulo>.entity.ts
+```
 
-- [ ] [Set up project integrations](https://gitlab.com/caio.mijoler/project-paulo/-/settings/integrations)
+---
 
-## Collaborate with your team
+## 🔐 Autenticação
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+Todas as rotas são protegidas por JWT, **exceto**:
 
-## Test and Deploy
+| Rota | Método | Descrição |
+|---|---|---|
+| `/v1/auth/login` | POST | Login com email e senha |
+| `/v1/user` | POST | Criação de novo usuário |
+| `/health` | GET | Health check |
 
-Use the built-in continuous integration in GitLab.
+**Uso do token:**
+```
+Authorization: Bearer <token-retornado-no-login>
+```
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+---
 
-***
+## 🗃️ Migrations
 
-# Editing this README
+```bash
+# Rodar todas as migrations pendentes
+npm run migrations:run
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+# Reverter a última migration
+npm run migrations:revert
 
-## Suggestions for a good README
+# Criar uma nova migration
+npm run migration:create -- NomeDaMigration
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+# Ver status das migrations
+npm run migration:show
+```
 
-## Name
-Choose a self-explaining name for your project.
+---
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## 📡 Endpoints Principais
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+| Rota | Método | Descrição |
+|---|---|---|
+| `/v1/auth/login` | POST | Autenticação |
+| `/v1/clients` | GET / POST | Listar / Criar pacientes |
+| `/v1/clients/:id` | GET / PUT / DELETE | Gerenciar paciente |
+| `/v1/medical-record` | GET / POST | Listar / Criar prontuários |
+| `/v1/medical-record/:id` | GET / PUT / DELETE | Gerenciar prontuário |
+| `/v1/calendar` | GET / POST / DELETE | Gerenciar agendamentos |
+| `/v1/pathologies` | GET / POST | Listar / Criar patologias |
+| `/v1/questions` | GET / POST | Listar / Criar perguntas |
+| `/v1/treatment` | GET / POST | Listar / Criar tratamentos |
+| `/v1/feedback` | GET / POST | Listar / Criar feedbacks |
+| `/v1/whatsapp` | POST | Enviar mensagem WhatsApp |
+| `/health` | GET | Status da aplicação |
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+Para detalhes completos de request/response, acesse o **Swagger**: `http://localhost:3000/api`
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+---
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## 🔍 Filtros e Paginação
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+Todos os endpoints de listagem suportam query params para filtragem dinâmica:
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```
+GET /v1/clients?paginate=true&current_page=1&per_page=10&search=João&search_fields=name,document&relations=clientAddress&sort[createdAt]=desc
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `paginate` | boolean | Ativa paginação |
+| `current_page` | number | Página atual (padrão: 1) |
+| `per_page` | number | Itens por página (padrão: 10) |
+| `filter[campo]` | string | Filtro exato por campo: status, datas, IDs |
+| `search` | string | Busca livre OR LIKE. **Usar com `search_fields`** |
+| `search_fields` | string (CSV) | Campos onde o `search` é aplicado: `name,document` |
+| `relations` | string (CSV) | Relations para carregar: `client,treatments` |
+| `fields` | string (CSV) | Campos a retornar: `id,name,email` |
+| `sort[campo]` | asc\|desc | Ordenação |
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+### `filter` vs `search`
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+| Situação | Usar | Exemplo |
+|---|---|---|
+| Valor exato / Status / Datas | `filter` | `filter[status]=CREATED` |
+| Busca livre em **um** campo | `filter` | `filter[name]=João` |
+| Busca livre em **múltiplos** campos (OR) | `search` + `search_fields` | `search=João&search_fields=name,document` |
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+**Exemplos por módulo:**
+```
+# Pacientes — busca por nome OU CPF
+GET /v1/clients?search=João&search_fields=name,document
 
-## License
-For open source projects, say how it is licensed.
+# Patologias — busca por código OU descrição
+GET /v1/pathologies?search=J00&search_fields=code,description
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+# Prontuários SCHEDULED buscando por sintoma ou conclusão
+GET /v1/medical-record?filter[status]=SCHEDULED&search=dor&search_fields=symptoms,conclusion
+```
+
+---
+
+## 📄 Documentação Adicional
+
+A documentação de arquitetura detalhada está em [`docs/skills/`](./docs/skills/):
+
+| Documento | Conteúdo |
+|---|---|
+| [01 - Visão Geral](./docs/skills/01-visao-geral-arquitetura.md) | Stack, estrutura, fluxo de requisição |
+| [02 - Estrutura de Módulos](./docs/skills/02-estrutura-modulos.md) | Padrões de Module/Controller/Service |
+| [03 - Modelo de Dados](./docs/skills/03-modelo-de-dados.md) | Entidades, colunas, relacionamentos |
+| [04 - Validação de DTOs](./docs/skills/04-validacao-dtos.md) | ErrorMessages, class-validator, transforms |
+| [05 - Filtro e Paginação](./docs/skills/05-filtro-e-paginacao.md) | FilterDto, IPaginate, filter handlers |
+| [06 - Autenticação](./docs/skills/06-autenticacao.md) | Fluxo JWT, middleware, req.user |
+| [07 - Integrações Externas](./docs/skills/07-integracoes-externas.md) | Google Calendar, WhatsApp API |
+| [08 - Domínios de Negócio](./docs/skills/08-dominios-negocio.md) | Escopo completo por módulo |
+| [09 - Guia Novo Módulo](./docs/skills/09-guia-novo-modulo.md) | Checklist para criar um novo módulo |
+
+---
+
+## 👥 Autores
+
+- **Caio Mijoler** — Desenvolvimento

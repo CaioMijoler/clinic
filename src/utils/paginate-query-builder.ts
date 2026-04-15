@@ -19,7 +19,8 @@ export function queryBuild<T>(
   filterDto: FilterDto,
   alias: string,
 ): SelectQueryBuilder<T> {
-  const { filter, relations, fields, sort } = filterDto;
+  const { filter, relations, fields, sort, search, search_fields } = filterDto;
+
 
   if (filter) {
     const conditions = getConditions(filterDto, queryBuilder, alias);
@@ -45,6 +46,10 @@ export function queryBuild<T>(
         order.toUpperCase() as 'ASC' | 'DESC',
       );
     });
+  }
+
+  if (search && search_fields) {
+    applySearch(queryBuilder, alias, search, search_fields);
   }
 
   return queryBuilder;
@@ -116,4 +121,25 @@ function getConditions(filterDto: FilterDto, queryBuilder, alias: string) {
 }
 function matchStrToArray(fields: string): string[] {
   return fields.split(',').map((field) => field.trim());
+}
+
+function applySearch<T>(
+  queryBuilder: SelectQueryBuilder<T>,
+  alias: string,
+  search: string,
+  search_fields: string,
+): void {
+  const fields = matchStrToArray(search_fields);
+  const term = `%${search}%`;
+
+  queryBuilder.andWhere(
+    new Brackets((qb) => {
+      fields.forEach((field, index) => {
+        const paramKey = `search_${field}_${index}`;
+        qb.orWhere(`${alias}.${field} LIKE :${paramKey}`, {
+          [paramKey]: term,
+        });
+      });
+    }),
+  );
 }

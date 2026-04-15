@@ -36,4 +36,29 @@ export class FilterDto implements FilterPagination {
   @IsOptional()
   @Transform(({ value }: TransformFnParams) => parseInt(value))
   limit?: number;
+
+  /**
+   * Termo de busca livre (OR LIKE em múltiplos campos).
+   * Exemplo: search=João
+   */
+  @ApiProperty({
+    required: false,
+    description: 'Termo de busca livre. Use junto com search_fields.',
+    example: 'João',
+  })
+  @IsOptional()
+  search?: string;
+
+  /**
+   * Campos onde o search será aplicado (CSV).
+   * Exemplo: search_fields=name,document
+   */
+  @ApiProperty({
+    required: false,
+    description:
+      'Campos onde aplicar o search (CSV). Ex: name,document',
+    example: 'name,document',
+  })
+  @IsOptional()
+  search_fields?: string;
 }
