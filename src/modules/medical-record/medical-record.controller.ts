@@ -8,6 +8,7 @@ import {
   Delete,
   Req,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { MedicalRecordService } from './medical-record.service';
 import {
@@ -49,6 +50,18 @@ export class MedicalRecordController {
     @Query() queryParams: FilterDto,
   ): Promise<IPaginate<MedicalRecordResponseDto> | MedicalRecordResponseDto[]> {
     return await this.medicalRecordService.findAll(queryParams);
+  }
+
+  @Get('client/:clientId')
+  @ApiOkResponse({
+    type: MedicalRecordResponseDto,
+    isArray: true,
+  })
+  async findByClient(
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Query() queryParams: FilterDto,
+  ): Promise<IPaginate<MedicalRecordResponseDto> | MedicalRecordResponseDto[]> {
+    return await this.medicalRecordService.findByClient(clientId, queryParams);
   }
 
   @Get(':id')

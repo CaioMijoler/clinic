@@ -133,6 +133,33 @@ export class MedicalRecordService {
     }
   }
 
+  async findByClient(
+    clientId: number,
+    queryParams: FilterDto,
+  ): Promise<IPaginate<MedicalRecordResponseDto> | MedicalRecordResponseDto[]> {
+    try {
+      const params: FilterDto = {
+        ...queryParams,
+        filter: { ...queryParams.filter, clientId: String(clientId) },
+      };
+
+      const data = await findAllWithQueryBuilder<MedicalRecord>(
+        this.medicalRecordRepository,
+        params,
+        'mr',
+      );
+
+      return data as
+        | IPaginate<MedicalRecordResponseDto>
+        | MedicalRecordResponseDto[];
+    } catch (error) {
+      const message =
+        'Ocorreu um erro ao buscar os prontuários do cliente.';
+      Logger.error(message, error?.stack ?? error.message);
+      throw new BadRequestException(message);
+    }
+  }
+
   async findOne(id: number): Promise<MedicalRecordResponseDto> {
     const data = await this.medicalRecordRepository.findOne({
       where: { id },

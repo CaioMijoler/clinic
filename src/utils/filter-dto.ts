@@ -19,9 +19,12 @@ export class FilterDto implements FilterPagination {
   @Transform(({ value }: TransformFnParams) => parseInt(value))
   per_page?: number;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({
+    required: false,
+    description: 'Filtro por campos. Ex: filter[name]=João&filter[status]=CREATED',
+  })
   @IsOptional()
-  filter?: string;
+  filter?: Record<string, string>;
 
   @ApiProperty({ required: false })
   fields?: string;

@@ -267,11 +267,63 @@ A documentação de arquitetura detalhada está em [`docs/skills/`](./docs/skill
 | [02 - Estrutura de Módulos](./docs/skills/02-estrutura-modulos.md) | Padrões de Module/Controller/Service |
 | [03 - Modelo de Dados](./docs/skills/03-modelo-de-dados.md) | Entidades, colunas, relacionamentos |
 | [04 - Validação de DTOs](./docs/skills/04-validacao-dtos.md) | ErrorMessages, class-validator, transforms |
-| [05 - Filtro e Paginação](./docs/skills/05-filtro-e-paginacao.md) | FilterDto, IPaginate, filter handlers |
+| [05 - Filtro e Paginação](./docs/skills/05-filtro-e-paginacao.md) | FilterDto, search, filter handlers |
 | [06 - Autenticação](./docs/skills/06-autenticacao.md) | Fluxo JWT, middleware, req.user |
 | [07 - Integrações Externas](./docs/skills/07-integracoes-externas.md) | Google Calendar, WhatsApp API |
 | [08 - Domínios de Negócio](./docs/skills/08-dominios-negocio.md) | Escopo completo por módulo |
 | [09 - Guia Novo Módulo](./docs/skills/09-guia-novo-modulo.md) | Checklist para criar um novo módulo |
+| [10 - Testes](./docs/skills/10-testes.md) | Estrutura, comandos, factories e convenções de testes |
+
+---
+
+## 🧪 Testes
+
+### Estrutura
+
+```
+test/                          # Testes na raiz do projeto
+└── medical-record/
+    ├── medical-record.factory.ts          # Fábricas de dados (makeUser, makeClient, makeMedicalRecord...)
+    └── medical-record-find-by-client.spec.ts  # Testes do endpoint GET /client/:clientId
+
+src/
+└── modules/
+    └── health/
+        └── health.controller.spec.ts     # Unit test do health check
+```
+
+### Comandos
+
+```bash
+# Rodar todos os testes
+yarn test
+
+# Rodar em modo watch (reroda ao salvar)
+yarn test:watch
+
+# Rodar com relatório de coverage
+yarn test:cov
+
+# Rodar um arquivo específico (sem coverage)
+npx jest test/medical-record/medical-record-find-by-client.spec.ts --no-coverage
+
+# Rodar todos os testes de uma pasta
+npx jest test/medical-record --no-coverage
+
+# Rodar com nome de cenário específico (padrão -t)
+npx jest --no-coverage -t "deve retornar os prontuários"
+```
+
+### Convenções
+
+- **Factories** em `test/<modulo>/<modulo>.factory.ts` com funções `make<Entity>()` e `make<Entity>List()`
+- **Specs** em `test/<modulo>/<modulo>-<funcionalidade>.spec.ts`
+- **Imports** usando aliases do `tsconfig.json`:
+  - `@modules/*` → `src/modules/*`
+  - `@app/*` → `src/*`
+  - `@test/*` → `test/*`
+- **DB não é necessário**: services são testados com mocks do Repository e DataSource
+- **Coverage** gerado em `coverage/` (ignorado pelo git)
 
 ---
 
