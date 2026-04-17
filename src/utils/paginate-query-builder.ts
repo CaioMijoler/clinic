@@ -1,5 +1,6 @@
 import { Brackets, SelectQueryBuilder } from 'typeorm';
 import { FilterDto } from './filter-dto';
+import { BadRequestException } from '@nestjs/common';
 
 export function paginateQuery<T>(
   queryBuilder: SelectQueryBuilder<T>,
@@ -123,6 +124,15 @@ function matchStrToArray(fields: string): string[] {
   return fields.split(',').map((field) => field.trim());
 }
 
+function getValidColumns<T>(
+  queryBuilder: SelectQueryBuilder<T>,
+  alias: string,
+): string[] {
+  return queryBuilder.expressionMap.mainAlias?.metadata.columns.map(
+    (col) => col.propertyName,
+  );
+}
+
 function applySearch<T>(
   queryBuilder: SelectQueryBuilder<T>,
   alias: string,
@@ -130,13 +140,25 @@ function applySearch<T>(
   search_fields: string,
 ): void {
   const fields = matchStrToArray(search_fields);
+  const validColumns = getValidColumns(queryBuilder, alias);
+
   const term = `%${search}%`;
 
   queryBuilder.andWhere(
     new Brackets((qb) => {
       fields.forEach((field, index) => {
-        const paramKey = `search_${field}_${index}`;
-        qb.orWhere(`${alias}.${field} LIKE :${paramKey}`, {
+        const cleanField = field.replace(/"/g, "");
+
+        if (!validColumns.includes(cleanField)) {
+          throw new BadRequestException(
+            `Campo de busca inválido: ${cleanField}`,
+          );
+        }
+
+        const safeField = cleanField.replace(/[^a-zA-Z0-9_]/g, "_");
+        const paramKey = `search_${safeField}_${index}`;
+
+        qb.orWhere(`${alias}.${cleanField} LIKE :${paramKey}`, {
           [paramKey]: term,
         });
       });
