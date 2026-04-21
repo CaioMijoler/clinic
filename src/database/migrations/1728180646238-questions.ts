@@ -22,7 +22,7 @@ export class Questions1728180646238 implements MigrationInterface {
           {
             name: 'response',
             type: 'varchar',
-            length: '255',
+            length: '500',
             isNullable: true,
           },
           {

@@ -25,22 +25,22 @@ export class CreateMedicalRecordDto {
 
   @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('Sintomas') })
-  @Length(1, 255, {
-    message: ErrorMessages['length']('Sintomas', 1, 255),
+  @Length(1, 500, {
+    message: ErrorMessages['length']('Sintomas', 1, 500),
   })
   symptoms: string;
-
+nes
   @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('Exame clínico') })
-  @Length(1, 255, {
-    message: ErrorMessages['length']('Exame clínico', 1, 255),
+  @Length(1, 500, {
+    message: ErrorMessages['length']('Exame clínico', 1, 500),
   })
   clinicalExam: string;
 
   @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('Exame clínico completo') })
-  @Length(1, 255, {
-    message: ErrorMessages['length']('Exame clínico completo', 1, 255),
+  @Length(1, 1000, {
+    message: ErrorMessages['length']('Exame clínico completo', 1, 1000),
   })
   completeClinicalExam: string;
 
@@ -48,8 +48,8 @@ export class CreateMedicalRecordDto {
   @IsString({
     message: ErrorMessages['string.base']('Conclusão do prontuário'),
   })
-  @MaxLength(255, {
-    message: ErrorMessages['string.max']('Conclusão', 255),
+  @MaxLength(1000, {
+    message: ErrorMessages['string.max']('Conclusão', 1000),
   })
   @IsOptional()
   conclusion: string;

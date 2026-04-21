@@ -35,8 +35,7 @@ export class MedicalRecord1728170882520 implements MigrationInterface {
           },
           {
             name: 'conclusion',
-            type: 'varchar',
-            length: '255',
+            type: 'text',
             isNullable: true,
           },
           {

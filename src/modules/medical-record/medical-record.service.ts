@@ -63,7 +63,7 @@ export class MedicalRecordService {
             ...medicalRecordData,
             userId: auth?.id,
             clientId: finalClientId,
-            status: MedicalRecordStatusEnum.CREATED,
+            status: createMedicalRecordDto?.conclusion ? MedicalRecordStatusEnum.CONCLUDED : MedicalRecordStatusEnum.CREATED,
           });
 
           const newPathologies = await this.createOrUpdatePathologies(

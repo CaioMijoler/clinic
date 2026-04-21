@@ -41,31 +41,27 @@ export class MedicalRecord {
   endDate: Date;
 
   @Column({
-    type: 'varchar',
-    length: 255,
+    type: 'text',
     nullable: true,
   })
   symptoms: string;
 
   @Column({
     name: 'clinical_exam',
-    type: 'varchar',
-    length: 255,
+    type: 'text',
     nullable: true,
   })
   clinicalExam: string;
 
   @Column({
     name: 'completed_clinical_exam',
-    type: 'varchar',
-    length: 255,
+    type: 'text',
     nullable: true,
   })
   completeClinicalExam: string;
 
   @Column({
-    type: 'varchar',
-    length: 255,
+    type: 'text',
     nullable: true,
   })
   conclusion: string;

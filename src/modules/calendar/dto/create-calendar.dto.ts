@@ -24,9 +24,14 @@ class DateStartAndEnd {
 
 export class CreateCalendarDto {
   @ApiProperty()
-  @IsNotEmpty({ message: ErrorMessages['empty']('Tipo') })
   @IsNumber({}, { message: ErrorMessages['string.base']('Id do prontuário') })
-  medicalRecordId: number;
+  @IsOptional()
+  medicalRecordId?: number;
+
+  @ApiProperty()
+  @IsNumber({}, { message: ErrorMessages['string.base']('Id do paciente') })
+  @IsNotEmpty({ message: ErrorMessages['empty']('Id do paciente') })
+  clientId: number;
 
   @ApiProperty()
   @IsNotEmpty({ message: ErrorMessages['empty']('Tipo') })

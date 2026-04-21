@@ -15,6 +15,7 @@ import { User } from '../user/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { MedicalRecord } from '../medical-record/entities/medical-record.entity';
 import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
+import { Client } from '../clients/entities/client.entity';
 
 @Injectable()
 export class CalendarService {
@@ -33,6 +34,7 @@ export class CalendarService {
       const { ...calendarData } = createCalendarDto;
       const dataSourceResponse = await this.dataSource.transaction(
         async (manager) => {
+          let medicalRecord = null;
           const userAuth = await manager.findOne(User, {
             where: { id: user.id },
             select: [
@@ -49,14 +51,30 @@ export class CalendarService {
               'Não conseguimos encontrar o solicitante.',
             );
           }
-          const medicalRecord = await manager.findOne(MedicalRecord, {
-            where: { id: createCalendarDto.medicalRecordId },
+
+          const client = await manager.findOne(Client, {
+            where: { id: createCalendarDto.clientId },
+            select: [
+              'id',
+              'name',
+            ],
           });
 
-          if (!medicalRecord) {
+          if (!client) {
             throw new NotFoundException(
-              'Não conseguimos encontrar o prontuário.',
+              'Não conseguimos encontrar o paciente.',
             );
+          }
+
+          if (createCalendarDto.medicalRecordId) {
+             medicalRecord = await manager.findOne(MedicalRecord, {
+              where: { id: createCalendarDto.medicalRecordId },
+            });
+            if (!medicalRecord) {
+              throw new NotFoundException(
+                'Não conseguimos encontrar o prontuário.',
+              );
+            }
           }
           await this.googleAuth(userAuth);
 
@@ -64,6 +82,7 @@ export class CalendarService {
             medicalRecord,
             calendar: createCalendarDto,
             user: userAuth,
+            client
           };
         },
       );
@@ -77,14 +96,16 @@ export class CalendarService {
       const payloadMedicalOrder = await this.createPayloadOrder(
         dataSourceResponse.calendar,
       );
-      await this.medicalRecordRepository.update(
-        dataSourceResponse.calendar.medicalRecordId,
+      await this.medicalRecordRepository.save(
         {
+          ...dataSourceResponse.medicalRecord,
           title: payloadMedicalOrder.title,
           startDate: payloadMedicalOrder.startDate,
           endDate: payloadMedicalOrder.endDate,
           calendarGoogleId: response['data']['id'],
           status: MedicalRecordStatusEnum.SCHEDULED,
+          clientId: dataSourceResponse.client.id,
+          userId: dataSourceResponse.user.id,
         },
       );
 
@@ -159,7 +180,7 @@ export class CalendarService {
       });
 
       await this.medicalRecordRepository.update(medicalRecord.id, {
-        status: MedicalRecordStatusEnum.CANCELED_SCHEDULE,
+        status: MedicalRecordStatusEnum.CANCELED,
       });
 
       if (response.data === '') {
@@ -197,14 +218,6 @@ export class CalendarService {
   async createPayloadOrder(
     calendarDto: CreateCalendarDto,
   ): Promise<CreateOrderDto> {
-    // const startDate = moment(calendarDto.start.dateTime)
-    //   .subtract(3, 'hours')
-    //   .toString();
-
-    // const endDate = moment(calendarDto.end.dateTime)
-    //   .subtract(3, 'hours')
-    //   .toString();
-
     return {
       medicalRecordId: calendarDto.medicalRecordId,
       calendarGoogleId: null,

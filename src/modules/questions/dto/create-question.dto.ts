@@ -10,7 +10,7 @@ export class CreateQuestionDto {
 
   @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('Resposta') })
-  @MaxLength(255, { message: ErrorMessages['string.max']('Resposta', 255) })
+  @MaxLength(500, { message: ErrorMessages['string.max']('Resposta', 500) })
   @IsOptional()
   response: string;
 }

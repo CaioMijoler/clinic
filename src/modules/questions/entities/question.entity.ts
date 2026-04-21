@@ -24,7 +24,7 @@ export class Question {
 
   @Column({
     type: 'varchar',
-    length: 255,
+    length: 500,
     nullable: true,
   })
   response: string;
