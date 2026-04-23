@@ -28,7 +28,7 @@ export class PathologiesService {
   ): Promise<ResponsePathologyDto> {
     try {
       return await this.pathologyRepository.save(createPathologyDto);
-    } catch (error) {
+    } catch (error: any) {
       const message = 'Ocorreu um erro ao criar a patologia.';
 
       if (error instanceof HttpException) {
@@ -50,7 +50,7 @@ export class PathologiesService {
         queryParams,
         'p',
       );
-    } catch (error) {
+    } catch (error: any) {
       const message = 'Ocorreu um erro ao buscar as patologias.';
       Logger.error(message, error?.stack ?? error.message);
       throw new BadRequestException(message);
@@ -80,7 +80,7 @@ export class PathologiesService {
       };
 
       return await this.pathologyRepository.save(pathology);
-    } catch (error) {
+    } catch (error: any) {
       const message = 'Ocorreu um erro ao atualizar a patologia.';
 
       if (error instanceof HttpException) {
@@ -106,7 +106,7 @@ export class PathologiesService {
       }
 
       await this.pathologyRepository.remove(pathology);
-    } catch (error) {
+    } catch (error: any) {
       const message = 'Ocorreu um erro ao remover a patologia.';
 
       if (error instanceof HttpException) {
