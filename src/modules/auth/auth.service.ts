@@ -95,9 +95,9 @@ export class AuthService {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...userData } = user;
       return userData;
-    } catch (error) {
+    } catch (error: unknown) {
       const message: string = 'Token de acesso expirado!';
-      Logger.error(message, error?.stack ?? error.message);
+      Logger.error(message, error instanceof Error ? error.stack : undefined);
 
       throw new UnauthorizedException(error);
     }

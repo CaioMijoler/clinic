@@ -26,6 +26,8 @@ import { CreateMedicalRecordPathologyDto } from './dto/medical-record-pathologie
 import { MedicalRecordPathologies } from './entities/medical-record-pathologies.entity';
 import { CreateMedicalRecordQuestionsDto } from './dto/medical-record-questions/create-medical-record-questions.dto';
 import { MedicalRecordQuestion } from './entities/medical-record-questions.entity';
+import { CreateFeedbackDto } from '../feedback/dto/create-feedback.dto';
+import { Feedback } from '../feedback/entities/feedback.entity';
 
 @Injectable()
 export class MedicalRecordService {
@@ -45,6 +47,7 @@ export class MedicalRecordService {
         medicalRecordPathologies,
         treatments,
         medicalRecordQuestions,
+        feedbacks,
         ...medicalRecordData
       } = createMedicalRecordDto;
 
@@ -63,7 +66,9 @@ export class MedicalRecordService {
             ...medicalRecordData,
             userId: auth?.id,
             clientId: finalClientId,
-            status: createMedicalRecordDto?.conclusion ? MedicalRecordStatusEnum.CONCLUDED : MedicalRecordStatusEnum.CREATED,
+            status: createMedicalRecordDto?.conclusion
+              ? MedicalRecordStatusEnum.CONCLUDED
+              : MedicalRecordStatusEnum.CREATED,
           });
 
           const newPathologies = await this.createOrUpdatePathologies(
@@ -84,6 +89,12 @@ export class MedicalRecordService {
             medicalData,
             'create',
           );
+          const newFeedbacks = await this.createOrUpdateFeedbacks(
+            manager,
+            feedbacks,
+            medicalData,
+            'create',
+          );
 
           return {
             ...medicalData,
@@ -96,6 +107,7 @@ export class MedicalRecordService {
             medicalRecordPathologies: newPathologies,
             treatments: newTreatments,
             medicalRecordQuestions: newQuestions,
+            feedbacks: newFeedbacks,
           };
         },
       );
@@ -153,8 +165,7 @@ export class MedicalRecordService {
         | IPaginate<MedicalRecordResponseDto>
         | MedicalRecordResponseDto[];
     } catch (error) {
-      const message =
-        'Ocorreu um erro ao buscar os prontuários do cliente.';
+      const message = 'Ocorreu um erro ao buscar os prontuários do cliente.';
       Logger.error(message, error?.stack ?? error.message);
       throw new BadRequestException(message);
     }
@@ -188,6 +199,7 @@ export class MedicalRecordService {
         medicalRecordPathologies,
         treatments,
         medicalRecordQuestions,
+        feedbacks,
         ...medicalRecordData
       } = updateMedicalRecordDto;
       const medicalRecord = await this.medicalRecordRepository.findOne({
@@ -197,7 +209,7 @@ export class MedicalRecordService {
           'questions',
           'medicalRecordPathologies',
           'pathologies',
-          'feedback',
+          'feedbacks',
           'client',
           'treatments',
         ],
@@ -225,6 +237,7 @@ export class MedicalRecordService {
           let newPathologies = medicalRecord?.medicalRecordPathologies ?? [];
           let newTreatments = medicalRecord?.treatments ?? [];
           let newQuestions = medicalRecord?.medicalRecordQuestions ?? [];
+          let newFeedbacks = medicalRecord?.feedbacks ?? [];
 
           newPathologies = await this.createOrUpdatePathologies(
             manager,
@@ -244,6 +257,12 @@ export class MedicalRecordService {
             medicalData,
             'create',
           );
+          newFeedbacks = await this.createOrUpdateFeedbacks(
+            manager,
+            feedbacks,
+            medicalData,
+            'create',
+          );
 
           return {
             ...medicalData,
@@ -251,6 +270,7 @@ export class MedicalRecordService {
             medicalRecordPathologies: newPathologies,
             treatments: newTreatments,
             medicalRecordQuestions: newQuestions,
+            feedbacks: newFeedbacks,
           };
         },
       );
@@ -481,5 +501,53 @@ export class MedicalRecordService {
       }
     }
     return newQuestions;
+  }
+
+  async createOrUpdateFeedbacks(
+    manager: EntityManager,
+    feedbacksDto: CreateFeedbackDto[],
+    medicalRecord: MedicalRecord,
+    type?: string,
+  ) {
+    const allFeedbacks = await manager.find(Feedback, {
+      where: { medicalRecordId: medicalRecord?.id },
+    });
+
+    if (!feedbacksDto?.length) {
+      return [];
+    }
+
+    if (type === 'update') {
+      for (const feedback of allFeedbacks) {
+        await manager.remove(Feedback, feedback);
+      }
+    }
+
+    const newFeedbacks: Feedback[] = [];
+    for (const feedbackItemData of feedbacksDto) {
+      const existingFeedbackItem = allFeedbacks?.find(
+        (feedback) => feedback.description === feedbackItemData.description,
+      );
+
+      if (existingFeedbackItem) {
+        await manager.merge(Feedback, existingFeedbackItem, {
+          ...feedbackItemData,
+          medicalRecordId: medicalRecord?.id,
+        });
+
+        newFeedbacks.push(existingFeedbackItem);
+        await manager.save(Feedback, existingFeedbackItem);
+      } else {
+        const newFeedbackItem: Feedback = {
+          ...feedbackItemData,
+          medicalRecordId: medicalRecord?.id,
+        } as Feedback;
+
+        newFeedbacks.push(newFeedbackItem);
+        await manager.save(Feedback, newFeedbackItem);
+      }
+    }
+
+    return newFeedbacks;
   }
 }
