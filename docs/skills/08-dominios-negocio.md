@@ -49,7 +49,7 @@ Módulo central que **orquestra** a criação de cliente, patologias, tratamento
 - `clinicalExam` — Exame clínico inserido pelo médico
 - `completeClinicalExam` — Conclusão do exame clínico
 - `conclusion` — Conclusão do prontuário
-- `status` — CREATED / SCHEDULED / CANCELED / CANCELED_SCHEDULE
+- `status` — CREATED / SCHEDULED / CANCELED / CANCELED_SCHEDULE / CONFIRMED_SCHEDULE / IN_PROGRESS / CONCLUDED
 - `calendarGoogleId` — Vinculo ao evento Google Calendar
 - `title`, `startDate`, `endDate` — Dados do agendamento
 
@@ -96,11 +96,32 @@ DELETE /v1/medical-record/:id      → cancelar (status = CANCELED, soft)
 
 **Módulo:** `src/modules/calendar/`
 
-Integração com Google Calendar. O agendamento é criado a partir de um `MedicalRecord` existente.
+Integração com Google Calendar. O agendamento pode ser criado a partir de um `MedicalRecord` existente (via `medicalRecordId` opcional) e vinculado a um paciente (`clientId` obrigatório).
 
-- `create` → cria evento no calendar + atualiza o `MedicalRecord` com status SCHEDULED
-- `findAll` → lista eventos do calendário por período
-- `remove` → cancela evento + atualiza `MedicalRecord` com status CANCELED_SCHEDULE
+### CreateCalendarDto
+```typescript
+{
+  medicalRecordId?: number;   // Opcional — ID do prontuário em andamento
+  clientId: number;           // Obrigatório — ID do paciente
+  summary: string;            // Título do evento
+  description: string;        // Descrição
+  start: { dateTime, timeZone };
+  end: { dateTime, timeZone };
+}
+```
+
+### Endpoints
+| Método | Rota | Auth | Descrição |
+|---|---|---|---|
+| `POST` | `/v1/calendar` | ✅ Bearer | Criar evento no Calendar + MedicalRecord (status: SCHEDULED) |
+| `GET` | `/v1/calendar` | ✅ Bearer | Listar eventos por período |
+| `DELETE` | `/v1/calendar/:id` | ✅ Bearer | Cancelar evento (status: CANCELED_SCHEDULE) |
+| `POST` | `/v1/calendar/:eventId/confirm-attendance` | ❌ Público | Paciente confirma presença via token |
+| `GET` | `/v1/calendar/:eventId/confirmation-link` | ✅ Bearer | Gera link de confirmação manualmente |
+
+### Services
+- **`CalendarService`** — CRUD de eventos Google Calendar + confirmação de presença + geração de token
+- **`CalendarReminderService`** — Cron job que envia lembretes WhatsApp 12h antes do atendimento (a cada 5 min)
 
 ---
 
@@ -200,4 +221,5 @@ POST /v1/auth/logout  → encerrar sessão
 | Mensagens WhatsApp | `whatsapp` | ✅ Implementado |
 | Arquivos do paciente (upload) | — | ❌ Não implementado ainda |
 | Envio automático pós-prontuário | — | ❌ Não implementado ainda |
-| Notificações de lembretes | — | ❌ Não implementado ainda |
+| Lembrete automático de agendamento (WhatsApp 12h) | `calendar` (CalendarReminderService) | ✅ Implementado |
+| Confirmação de presença do paciente | `calendar` (confirmAttendance) | ✅ Implementado |

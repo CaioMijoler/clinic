@@ -36,6 +36,24 @@ medical-record/
     └── medical-record-questions.entity.ts    ← tabela pivô com dados extras
 ```
 
+### Módulos com services auxiliares
+
+Quando um módulo precisa de lógica adicional (ex: cron jobs), cria-se um subdiretório `services/`:
+
+```
+calendar/
+├── calendar.module.ts
+├── calendar.controller.ts
+├── calendar.service.ts            ← CRUD principal
+├── services/
+│   └── calendar-reminder.service.ts  ← cron job de lembretes
+└── dto/
+    ├── create-calendar.dto.ts
+    ├── confirm-attendance.dto.ts
+    ├── filter-calendar.dto.ts
+    └── ...
+```
+
 ## Padrão do Module File
 
 ```typescript

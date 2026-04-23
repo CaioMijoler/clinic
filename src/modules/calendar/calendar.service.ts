@@ -9,7 +9,7 @@ import { CreateCalendarDto } from './dto/create-calendar.dto';
 import { google } from 'googleapis';
 import { ConfigService } from '@nestjs/config';
 import { FilterCalendarDto } from './dto/filter-calendar.dto';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { User } from '../user/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -18,6 +18,7 @@ import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
 import { AttendanceStatusEnum } from '../../utils/enum/attendance.enum';
 import { Client } from '../clients/entities/client.entity';
 import { v4 as uuidv4 } from 'uuid';
+import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-resume.dto';
 
 @Injectable()
 export class CalendarService {
@@ -107,15 +108,14 @@ export class CalendarService {
 
       return response['data'];
     } catch (error) {
-      const err = error as any;
-      const message = `Ocorreu um erro ao criar o evento. Mais Detalhes: ${JSON.stringify(err?.errors) ?? err?.response?.message}`;
+      const message = `Ocorreu um erro ao criar o evento. Mais Detalhes: ${JSON.stringify(error?.errors) ?? error?.response?.message}`;
       if (error instanceof HttpException) throw error;
-      Logger.error(message, err?.stack ?? err?.message);
+      Logger.error(message, error?.stack ?? error?.message);
       throw new BadRequestException(message);
     }
   }
 
-  async findAll(queryParams: FilterCalendarDto, user: User) {
+  async findAll(queryParams: FilterCalendarDto, user: User): Promise<ResponseMedicalRecordResumeDto[]> {
     try {
       const userAuth = await this.dataSource.manager.findOne(User, {
         where: { id: user.id },
@@ -135,9 +135,23 @@ export class CalendarService {
         timeMax: queryParams.end,
         timeZone: 'America/Sao_Paulo',
       });
+      const items = response['data']['items'] || [];
 
-      const items = response['data']['items'];
-      return items;
+      const records = await this.medicalRecordRepository.find({
+        where: {
+          calendarGoogleId: In(items.map((item) => item.id)),
+        },
+      });
+
+      const recordsMap = new Map(
+        records.map((record) => [record.calendarGoogleId, record])
+      );
+
+      const enrichedItems = items.map((item) =>
+        this.mapToEventDto(item, recordsMap.get(item.id)),
+      );
+
+      return enrichedItems;
     } catch (error) {
       const message = 'Ocorreu um erro ao buscar os eventos.';
       if (error instanceof HttpException) throw error;
@@ -201,12 +215,12 @@ export class CalendarService {
     const CREDENTIALS = user.credentials;
     const SCOPES = this.configService.get<string>('calendar.url');
 
-    this.auth = new google.auth.JWT(
-      CREDENTIALS.client_email,
-      null,
-      CREDENTIALS.private_key,
-      SCOPES,
-    );
+    this.auth = new google.auth.JWT({
+      email: CREDENTIALS.client_email,
+      key: CREDENTIALS.private_key,
+      scopes: SCOPES,
+      subject: null,
+    });
 
     this.calendar = google.calendar({ version: 'v3', auth: this.auth });
   }
@@ -303,5 +317,24 @@ export class CalendarService {
         error instanceof Error ? error.stack : '',
       );
     }
+  }
+
+   private mapToEventDto(item: any, medicalRecord?: MedicalRecord): ResponseMedicalRecordResumeDto {
+    return {
+      id: item.id,
+      title: item.summary,
+      description: item.description,
+      start: { dateTime: item.start?.dateTime, timeZone: item.start?.timeZone },
+      end: { dateTime: item.end?.dateTime, timeZone: item.end?.timeZone },
+      status: item.status,
+      link: item.htmlLink,
+      summary: item.summary,
+      medicalRecord: medicalRecord
+        ? {
+            id: medicalRecord.id,
+            status: medicalRecord.status,
+          }
+        : null,
+    };
   }
 }

@@ -75,7 +75,11 @@ Client
 | conclusion | varchar(255) | Conclusão do prontuário |
 | client_id | int FK | → clients.id |
 | user_id | int FK | → users.id |
-| status | varchar | Enum: CREATED / SCHEDULED / CANCELED / CANCELED_SCHEDULE |
+| status | varchar | Enum: CREATED / SCHEDULED / CANCELED / CANCELED_SCHEDULE / CONFIRMED_SCHEDULE / IN_PROGRESS / CONCLUDED |
+| attendance_status | enum | Enum: PENDING / CONFIRMED / NO_SHOW (default: PENDING) |
+| confirmation_token | varchar(255) | Token UUID para link de confirmação de presença (nullable) |
+| confirmed_at | timestamp | Data/hora da confirmação de presença (nullable) |
+| reminder_sent_at | timestamp | Data/hora do envio do lembrete WhatsApp (nullable) |
 | created_at | timestamp | |
 | updated_at | timestamp | |
 
@@ -153,10 +157,13 @@ Relação: `ManyToOne` → MedicalRecord
 ```typescript
 // src/utils/enum/medical-record.enum.ts
 enum MedicalRecordStatusEnum {
-  CREATED = 'CREATED',              // Prontuário criado, sem agendamento
-  SCHEDULED = 'SCHEDULED',          // Agendamento criado no Google Calendar
-  CANCELED = 'CANCELED',            // Prontuário cancelado/removido
-  CANCELED_SCHEDULE = 'CANCELED_SCHEDULE', // Agendamento cancelado no Calendar
+  CREATED = 'created',                        // Prontuário criado, sem agendamento
+  SCHEDULED = 'scheduled',                    // Agendamento criado no Google Calendar
+  CANCELED = 'canceled',                      // Prontuário cancelado/removido
+  CANCELED_SCHEDULE = 'canceled_schedule',     // Agendamento cancelado no Calendar
+  CONFIRMED_SCHEDULE = 'confirmed_schedule',  // Paciente confirmou presença
+  IN_PROGRESS = 'in_progress',                // Atendimento em andamento
+  CONCLUDED = 'concluded',                    // Atendimento concluído
 }
 ```
 
@@ -174,6 +181,8 @@ enum MedicalRecordStatusEnum {
 | 1728764877475 | medical-record-pathologies.ts | Tabela pivô |
 | 1728764903649 | medical-record-questions.ts | Tabela pivô |
 | 1733775454390 | client-address.ts | Tabela `client_address` |
+| 1713000000000 | add-attendance-confirmation.ts | Colunas `attendance_status`, `confirmation_token`, `confirmed_at` em `medical_record` |
+| 1745343600000 | add-reminder-sent-at.ts | Coluna `reminder_sent_at` em `medical_record` |
 
 ## Comandos de Migration
 

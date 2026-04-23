@@ -14,6 +14,7 @@ import { CreateCalendarDto } from './dto/create-calendar.dto';
 import { ConfirmAttendanceDto } from './dto/confirm-attendance.dto';
 import { FilterCalendarDto } from './dto/filter-calendar.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-resume.dto';
 
 @ApiTags('calendar')
 @Controller('v1/calendar')
@@ -28,7 +29,7 @@ export class CalendarController {
 
   @Get()
   @ApiBearerAuth()
-  findAll(@Req() req: Request, @Query() queryParams: FilterCalendarDto) {
+  findAll(@Req() req: Request, @Query() queryParams: FilterCalendarDto):Promise<ResponseMedicalRecordResumeDto[]> {
     return this.calendarService.findAll(queryParams, req?.user);
   }
 

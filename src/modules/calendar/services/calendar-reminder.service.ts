@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { WhatsAppTemplates } from '../../../utils/whatsapp-templates';
+import { Between, IsNull, Repository } from 'typeorm';
 import { MedicalRecordStatusEnum } from '../../../utils/enum/medical-record.enum';
-import { MedicalRecord } from '@app/modules/medical-record/entities/medical-record.entity';
-import { WhatsappService } from '@app/whatsapp/whatsapp.service';
+import { MedicalRecord } from '../../medical-record/entities/medical-record.entity';
+import { WhatsappService } from '../../../whatsapp/whatsapp.service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class CalendarReminderService {
@@ -18,107 +18,122 @@ export class CalendarReminderService {
   ) {}
 
   /**
-   * Job que roda a cada 5 minutos para enviar lembretes
-   * Envia mensagem 12h antes da consulta
+   * Cron que roda a cada 5 minutos para enviar lembretes de agendamento.
+   * Busca consultas com startDate entre 12h ± 5min a partir de agora,
+   * com status SCHEDULED e sem lembrete enviado (reminderSentAt = null).
    */
-  @Cron('*/5 * * * *') // Executa a cada 5 minutos
+  @Cron('*/5 * * * *')
   async sendReminderMessages() {
     try {
       const now = new Date();
-      // Calcula 12 horas para frente
-      const reminderTime = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-      // Margem de 5 minutos para não perder nenhuma consulta
-      const reminderTimeEnd = new Date(reminderTime.getTime() + 5 * 60 * 1000);
+      const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+      const marginMs = 5 * 60 * 1000;
 
-      // Busca consultas que:
-      // 1. Não foram canceladas
-      // 2. O lembrete ainda não foi enviado
-      // 3. Estão programadas para os próximos 12 horas
+      // Busca direto no banco com filtro de data — evita carregar tudo em memória
       const appointments = await this.medicalRecordRepository.find({
         where: {
           status: MedicalRecordStatusEnum.SCHEDULED,
-          reminderSentAt: null,
+          reminderSentAt: IsNull(),
+          startDate: Between(
+            new Date(twelveHoursFromNow.getTime() - marginMs),
+            new Date(twelveHoursFromNow.getTime() + marginMs),
+          ),
         },
         relations: ['client', 'user'],
       });
 
-      // Filtra apenas as que estão na janela de 12 horas
-      const appointmentsToRemind = appointments.filter((apt) => {
-        const aptTime = new Date(apt.startDate);
-        return aptTime >= now && aptTime <= reminderTimeEnd;
-      });
+      if (appointments.length === 0) return;
 
-      for (const appointment of appointmentsToRemind) {
+      this.logger.log(
+        `Encontrados ${appointments.length} agendamento(s) para enviar lembrete`,
+      );
+
+      for (const appointment of appointments) {
         await this.sendReminderMessage(appointment);
       }
 
-      if (appointmentsToRemind.length > 0) {
-        this.logger.log(
-          `${appointmentsToRemind.length} lembretes enviados com sucesso`,
-        );
-      }
+      this.logger.log(
+        `${appointments.length} lembrete(s) processado(s) com sucesso`,
+      );
     } catch (error) {
       this.logger.error(
-        `Erro ao enviar lembretes: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        `Erro ao processar lembretes: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        error instanceof Error ? error.stack : '',
       );
     }
   }
 
   /**
-   * Envia mensagem de lembrete para uma consulta específica
+   * Envia mensagem de lembrete para uma consulta específica.
+   * - Gera token de confirmação caso ainda não exista
+   * - Envia via template do WhatsApp Business (obrigatório para mensagens proativas)
+   * - Marca reminderSentAt para evitar reenvio
    */
   private async sendReminderMessage(appointment: MedicalRecord) {
     try {
       if (!appointment.client?.telephone) {
         this.logger.warn(
-          `Telefone não configurado para cliente ${appointment.clientId}`,
+          `Telefone não configurado para cliente ${appointment.clientId} — pulando lembrete para consulta ${appointment.id}`,
         );
         return;
+      }
+
+      // Gera token de confirmação se ainda não existe
+      if (!appointment.confirmationToken) {
+        appointment.confirmationToken = uuidv4();
+        await this.medicalRecordRepository.update(appointment.id, {
+          confirmationToken: appointment.confirmationToken,
+        });
       }
 
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
       const confirmationLink = `${frontendUrl}/confirmar-presenca/${appointment.id}/${appointment.confirmationToken}`;
 
-      // Formata a data para exibição
-      const appointmentDate = new Date(appointment.startDate).toLocaleString(
+      // Formata o horário para exibição
+      const appointmentTime = new Date(appointment.startDate).toLocaleString(
         'pt-BR',
         {
           weekday: 'long',
-          year: 'numeric',
-          month: 'long',
           day: 'numeric',
+          month: 'long',
           hour: '2-digit',
           minute: '2-digit',
         },
       );
 
-      const message = WhatsAppTemplates.confirmationReminder(
-        appointment.client.name,
-        appointment.user.name,
-        appointmentDate,
-        confirmationLink,
-      );
-
-      // Formata telefone: remove caracteres especiais
+      // Formata telefone: garante apenas dígitos com DDI
       const phone = appointment.client.telephone.replace(/\D/g, '');
+      const phoneWithDDI = phone.length <= 11 ? `55${phone}` : phone;
+     const professionalName = appointment.user?.name ?? 'seu profissional';
 
-      await this.whatsappService.sendMessage({
-        to: phone,
-        body: message,
+      await this.whatsappService.sendTemplateMessage({
+        to: phoneWithDDI,
+        templateName: 'lembrete_agendamento_12h',
+        languageCode: 'pt_BR',
+        bodyParameters: [
+          appointment.client.name,
+          professionalName,
+          appointmentTime,
+          confirmationLink,
+        ],
+        buttonParameters: [
+          { index: 0, text: confirmationLink },
+        ],
       });
 
       // Marca como enviado
-      appointment.reminderSentAt = new Date();
-      await this.medicalRecordRepository.save(appointment);
+      await this.medicalRecordRepository.update(appointment.id, {
+        reminderSentAt: new Date(),
+      });
 
       this.logger.log(
-        `Lembrete enviado para ${appointment.client.name} (${phone}) - Consulta ID: ${appointment.id}`,
+        `Lembrete enviado para ${appointment.client.name} (${phoneWithDDI}) — Consulta #${appointment.id}`,
       );
     } catch (error) {
       this.logger.error(
         `Erro ao enviar lembrete para consulta ${appointment.id}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
       );
-      // Não lançar erro para não interromper o fluxo de outros lembretes
+      // Não lança erro para não interromper o processamento dos próximos lembretes
     }
   }
 }

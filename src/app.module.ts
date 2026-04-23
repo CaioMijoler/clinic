@@ -54,6 +54,9 @@ export class AppModule implements NestModule {
       .exclude('v1/auth/login', 'health', {
         path: 'v1/user',
         method: RequestMethod.POST,
+      }, {
+        path: 'v1/calendar/:eventId/confirm-attendance',
+        method: RequestMethod.POST,
       })
       .forRoutes('*');
   }
