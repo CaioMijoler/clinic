@@ -121,7 +121,6 @@ export class CalendarReminderService {
         ],
       });
 
-      // Marca como enviado
       await this.medicalRecordRepository.update(appointment.id, {
         reminderSentAt: new Date(),
       });
@@ -133,7 +132,6 @@ export class CalendarReminderService {
       this.logger.error(
         `Erro ao enviar lembrete para consulta ${appointment.id}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
       );
-      // Não lança erro para não interromper o processamento dos próximos lembretes
     }
   }
 }
