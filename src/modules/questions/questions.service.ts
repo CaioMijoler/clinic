@@ -28,7 +28,7 @@ export class QuestionsService {
   ): Promise<ResponseQuestionDto> {
     try {
       return await this.questionRepository.save(createQuestionDto);
-    } catch (error) {
+    } catch (error: any) {
       const message = 'Ocorreu um erro ao criar a questão.';
 
       if (error instanceof HttpException) {
@@ -51,7 +51,7 @@ export class QuestionsService {
         'quest',
       );
       return data as IPaginate<ResponseQuestionDto> | ResponseQuestionDto[];
-    } catch (error) {
+    } catch (error: any) {
       const message = 'Ocorreu um erro ao buscar as questões.';
       Logger.error(message, error?.stack ?? error.message);
       throw new BadRequestException(message);
@@ -81,7 +81,7 @@ export class QuestionsService {
       };
 
       return await this.questionRepository.save(question);
-    } catch (error) {
+    } catch (error: any) {
       const message = 'Ocorreu um erro ao atualizar a questão.';
 
       if (error instanceof HttpException) {
@@ -107,7 +107,7 @@ export class QuestionsService {
       }
 
       await this.questionRepository.remove(question);
-    } catch (error) {
+    } catch (error: any) {
       const message = 'Ocorreu um erro ao remover a questão.';
 
       if (error instanceof HttpException) {
