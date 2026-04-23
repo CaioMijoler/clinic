@@ -69,10 +69,10 @@ Client
 | title | varchar(255) | Título do agendamento |
 | start_date | timestamp | Data/hora início consulta |
 | end_date | timestamp | Data/hora fim consulta |
-| symptoms | varchar(255) | Descrição dos sintomas |
-| clinical_exam | varchar(255) | Exame clínico (preenchido pelo médico) |
-| completed_clinical_exam | varchar(255) | Conclusão do exame clínico |
-| conclusion | varchar(255) | Conclusão do prontuário |
+| symptoms | text | Descrição dos sintomas (máx 900 chars) |
+| clinical_exam | text | Exame clínico (preenchido pelo médico) (máx 900 chars) |
+| completed_clinical_exam | text | Conclusão do exame clínico (máx 900 chars) |
+| conclusion | text | Conclusão do prontuário (máx 900 chars) |
 | client_id | int FK | → clients.id |
 | user_id | int FK | → users.id |
 | status | varchar | Enum: CREATED / SCHEDULED / CANCELED / CANCELED_SCHEDULE / CONFIRMED_SCHEDULE / IN_PROGRESS / CONCLUDED |
@@ -114,7 +114,7 @@ Relações: `ManyToMany` ↔ MedicalRecord, `OneToMany` → MedicalRecordPatholo
 |---|---|---|
 | id | int PK | |
 | name | varchar(255) | Texto da pergunta |
-| response | varchar(255) | Resposta da pergunta |
+| response | varchar(500) | Resposta da pergunta |
 | created_at | timestamp | |
 | updated_at | timestamp | |
 
