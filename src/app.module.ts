@@ -4,6 +4,7 @@ import {
   NestModule,
   RequestMethod,
 } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { HealthModule } from './modules/health/health.module';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
@@ -24,6 +25,7 @@ import { MedicalRecordModule } from './modules/medical-record/medical-record.mod
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule,
     JwtModule.register({
       secret: 'clinical',

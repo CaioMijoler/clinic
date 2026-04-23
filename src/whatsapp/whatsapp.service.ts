@@ -32,9 +32,9 @@ export class WhatsappService {
         },
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       throw new Error(
-        `Failed to send message: ${error.response ? error.response.data : error.message}`,
+        `Failed to send message: ${error.response ? JSON.stringify(error.response.data) : error.message}`,
       );
     }
   }

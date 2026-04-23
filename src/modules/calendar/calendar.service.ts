@@ -15,7 +15,9 @@ import { User } from '../user/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { MedicalRecord } from '../medical-record/entities/medical-record.entity';
 import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
+import { AttendanceStatusEnum } from '../../utils/enum/attendance.enum';
 import { Client } from '../clients/entities/client.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class CalendarService {
@@ -27,7 +29,7 @@ export class CalendarService {
     @InjectRepository(MedicalRecord)
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   async create(createCalendarDto: CreateCalendarDto, user: User) {
     try {
@@ -54,10 +56,7 @@ export class CalendarService {
 
           const client = await manager.findOne(Client, {
             where: { id: createCalendarDto.clientId },
-            select: [
-              'id',
-              'name',
-            ],
+            select: ['id', 'name'],
           });
 
           if (!client) {
@@ -67,7 +66,7 @@ export class CalendarService {
           }
 
           if (createCalendarDto.medicalRecordId) {
-             medicalRecord = await manager.findOne(MedicalRecord, {
+            medicalRecord = await manager.findOne(MedicalRecord, {
               where: { id: createCalendarDto.medicalRecordId },
             });
             if (!medicalRecord) {
@@ -82,12 +81,11 @@ export class CalendarService {
             medicalRecord,
             calendar: createCalendarDto,
             user: userAuth,
-            client
+            client,
           };
         },
       );
-      console.log(dataSourceResponse.user.calendarId)
-      console.log(calendarData)
+
       const response = await this.calendar.events.insert({
         calendarId: dataSourceResponse.user.calendarId,
         resource: calendarData,
@@ -96,18 +94,16 @@ export class CalendarService {
       const payloadMedicalOrder = await this.createPayloadOrder(
         dataSourceResponse.calendar,
       );
-      await this.medicalRecordRepository.save(
-        {
-          ...dataSourceResponse.medicalRecord,
-          title: payloadMedicalOrder.title,
-          startDate: payloadMedicalOrder.startDate,
-          endDate: payloadMedicalOrder.endDate,
-          calendarGoogleId: response['data']['id'],
-          status: MedicalRecordStatusEnum.SCHEDULED,
-          clientId: dataSourceResponse.client.id,
-          userId: dataSourceResponse.user.id,
-        },
-      );
+      await this.medicalRecordRepository.save({
+        ...dataSourceResponse.medicalRecord,
+        title: payloadMedicalOrder.title,
+        startDate: payloadMedicalOrder.startDate,
+        endDate: payloadMedicalOrder.endDate,
+        calendarGoogleId: response['data']['id'],
+        status: MedicalRecordStatusEnum.SCHEDULED,
+        clientId: dataSourceResponse.client.id,
+        userId: dataSourceResponse.user.id,
+      });
 
       return response['data'];
     } catch (error) {
@@ -225,5 +221,87 @@ export class CalendarService {
       endDate: calendarDto.start.dateTime,
       title: `${calendarDto.summary} ${calendarDto.description}`,
     };
+  }
+
+  async confirmAttendance(
+    eventId: string,
+    token: string,
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const medicalRecord = await this.medicalRecordRepository.findOne({
+        where: {
+          id: Number(eventId),
+          confirmationToken: token,
+        },
+        relations: ['client', 'user'],
+      });
+
+      if (!medicalRecord) {
+        throw new BadRequestException(
+          'Token inválido ou consulta não encontrada',
+        );
+      }
+
+      if (medicalRecord.attendanceStatus === AttendanceStatusEnum.CONFIRMED) {
+        throw new BadRequestException('Presença já foi confirmada');
+      }
+
+      medicalRecord.attendanceStatus = AttendanceStatusEnum.CONFIRMED;
+      medicalRecord.confirmedAt = new Date();
+
+      await this.medicalRecordRepository.save(medicalRecord);
+
+      await this.notifyProfessional(medicalRecord);
+
+      return {
+        success: true,
+        message: 'Presença confirmada com sucesso!',
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      const message =
+        error instanceof Error ? error.message : 'Erro ao confirmar presença';
+      Logger.error(message, error instanceof Error ? error.stack : '');
+      throw new BadRequestException(message);
+    }
+  }
+
+  async generateConfirmationToken(eventId: string): Promise<string> {
+    try {
+      const medicalRecord = await this.medicalRecordRepository.findOne({
+        where: { id: Number(eventId) },
+      });
+
+      if (!medicalRecord) {
+        throw new NotFoundException('Consulta não encontrada');
+      }
+
+      const token = uuidv4();
+      medicalRecord.confirmationToken = token;
+
+      await this.medicalRecordRepository.save(medicalRecord);
+
+      return token;
+    } catch (error: Error | any) {
+      const message: string = error
+        ? error.message
+        : 'Erro ao gerar token de confirmação';
+      Logger.error(message, error instanceof Error ? error.stack : '');
+      throw new BadRequestException(message);
+    }
+  }
+
+  private async notifyProfessional(medicalRecord: MedicalRecord) {
+    try {
+      Logger.log(
+        `Paciente ${medicalRecord.clientId} confirmou presença na consulta ${medicalRecord.id}`,
+      );
+      // TODO: Implementar envio de notificação para o profissional via WhatsApp/Email
+    } catch (error) {
+      Logger.error(
+        'Erro ao notificar profissional',
+        error instanceof Error ? error.stack : '',
+      );
+    }
   }
 }

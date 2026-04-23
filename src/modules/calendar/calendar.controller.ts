@@ -11,6 +11,7 @@ import {
 import { CalendarService } from './calendar.service';
 import { Request } from 'express';
 import { CreateCalendarDto } from './dto/create-calendar.dto';
+import { ConfirmAttendanceDto } from './dto/confirm-attendance.dto';
 import { FilterCalendarDto } from './dto/filter-calendar.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
@@ -35,5 +36,26 @@ export class CalendarController {
   @ApiBearerAuth()
   remove(@Req() req: Request, @Param('id') id: string) {
     return this.calendarService.remove(id, req?.user);
+  }
+
+  @Post(':eventId/confirm-attendance')
+  async confirmAttendance(
+    @Param('eventId') eventId: string,
+    @Body() confirmDto: ConfirmAttendanceDto,
+  ) {
+    return this.calendarService.confirmAttendance(eventId, confirmDto.token);
+  }
+
+  @Get(':eventId/confirmation-link')
+  @ApiBearerAuth()
+  async getConfirmationLink(@Param('eventId') eventId: string) {
+    const token = await this.calendarService.generateConfirmationToken(eventId);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const confirmationUrl = `${frontendUrl}/confirmar-presenca/${eventId}/${token}`;
+
+    return {
+      url: confirmationUrl,
+      token,
+    };
   }
 }
