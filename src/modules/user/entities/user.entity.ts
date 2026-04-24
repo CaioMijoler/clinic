@@ -45,6 +45,12 @@ export class User {
   @Column({ type: 'json' })
   credentials: Record<string, any>;
 
+  @Column({ name: 'client_email', type: 'text', nullable: true })
+  clientEmail: string;
+
+  @Column({ name: 'private_key', type: 'text', nullable: true })
+  privateKey: string;
+
   @Column({ name: 'calendar_id', type: 'text' })
   calendarId: string;
 

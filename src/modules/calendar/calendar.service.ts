@@ -45,7 +45,8 @@ export class CalendarService {
               'name',
               'whatsAppId',
               'whatsAppToken',
-              'credentials',
+              'clientEmail',
+              'privateKey',
               'calendarId',
             ],
           });
@@ -119,7 +120,7 @@ export class CalendarService {
     try {
       const userAuth = await this.dataSource.manager.findOne(User, {
         where: { id: user.id },
-        select: ['id', 'name', 'credentials', 'calendarId'],
+        select: ['id', 'name', 'clientEmail', 'privateKey', 'calendarId'],
       });
 
       if (!userAuth) {
@@ -164,7 +165,7 @@ export class CalendarService {
     try {
       const userAuth = await this.dataSource.manager.findOne(User, {
         where: { id: user.id },
-        select: ['id', 'name', 'credentials', 'calendarId'],
+        select: ['id', 'name',  'clientEmail', 'privateKey', , 'calendarId'],
       });
 
       if (!userAuth) {
@@ -212,12 +213,11 @@ export class CalendarService {
   }
 
   async googleAuth(user: User): Promise<void> {
-    const CREDENTIALS = user.credentials;
     const SCOPES = this.configService.get<string>('calendar.url');
 
     this.auth = new google.auth.JWT({
-      email: CREDENTIALS.client_email,
-      key: CREDENTIALS.private_key,
+      email: user.clientEmail,
+      key: user.privateKey,
       scopes: SCOPES,
       subject: null,
     });

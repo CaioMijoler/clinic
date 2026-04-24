@@ -9,7 +9,7 @@
 CALENDAR_URL=https://www.googleapis.com/auth/calendar  # scope OAuth
 ```
 
-O usuário precisa ter configurado no banco (`users.credentials`) um JSON de **Service Account** do Google:
+O usuário precisa ter configurado no banco  client_email, private_key ambos do tipo texto de **Service Account** do Google:
 ```json
 {
   "client_email": "service-account@projeto.iam.gserviceaccount.com",
