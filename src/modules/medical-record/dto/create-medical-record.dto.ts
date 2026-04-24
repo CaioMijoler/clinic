@@ -29,7 +29,6 @@ export class CreateMedicalRecordDto {
     message: ErrorMessages['length']('Sintomas', 1, 500),
   })
   symptoms: string;
-nes
   @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('Exame clínico') })
   @Length(1, 500, {
@@ -96,6 +95,13 @@ nes
   @IsDefined({ message: ErrorMessages['empty']('Tratamentos do prontuário') })
   @ValidateNested()
   treatments?: CreateTreatmentDto[];
+
+  @ApiProperty({ type: CreateFeedbackDto, isArray: true })
+  @Type(() => CreateFeedbackDto)
+  @IsOptional()
+  @IsDefined({ message: ErrorMessages['empty']('Feedbacks do prontuário') })
+  @ValidateNested()
+  feedbacks?: CreateFeedbackDto[];
 }
 
 export class MedicalRecordResponseDto {
