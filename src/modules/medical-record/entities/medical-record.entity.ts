@@ -18,7 +18,6 @@ import { MedicalRecordQuestion } from './medical-record-questions.entity';
 import { MedicalRecordPathologies } from './medical-record-pathologies.entity';
 import { Question } from '../../../modules/questions/entities/question.entity';
 import { Pathology } from '../../../modules/pathologies/entities/pathology.entity';
-import { AttendanceStatusEnum } from '../../../utils/enum/attendance.enum';
 
 @Entity('medical_record')
 export class MedicalRecord {
@@ -85,14 +84,6 @@ export class MedicalRecord {
     nullable: true,
   })
   status: string;
-
-  @Column({
-    name: 'attendance_status',
-    type: 'enum',
-    enum: AttendanceStatusEnum,
-    default: AttendanceStatusEnum.PENDING,
-  })
-  attendanceStatus: AttendanceStatusEnum;
 
   @Column({
     name: 'confirmation_token',

@@ -42,9 +42,6 @@ export class User {
   @Column({ type: 'varchar', length: 90, nullable: true })
   telephone: string;
 
-  @Column({ type: 'json' })
-  credentials: Record<string, any>;
-
   @Column({ name: 'client_email', type: 'text', nullable: true })
   clientEmail: string;
 

@@ -7,16 +7,6 @@ export class AddAttendanceConfirmation1713000000000
     await queryRunner.addColumn(
       'medical_record',
       new TableColumn({
-        name: 'attendance_status',
-        type: 'enum',
-        enum: ['PENDING', 'CONFIRMED', 'NO_SHOW'],
-        default: "'PENDING'",
-      }),
-    );
-
-    await queryRunner.addColumn(
-      'medical_record',
-      new TableColumn({
         name: 'confirmation_token',
         type: 'varchar',
         length: '255',
