@@ -42,9 +42,6 @@ export class User {
   @Column({ type: 'varchar', length: 90, nullable: true })
   telephone: string;
 
-  @Column({ type: 'json' })
-  credentials: Record<string, any>;
-
   @Column({ name: 'client_email', type: 'text', nullable: true })
   clientEmail: string;
 
@@ -59,6 +56,9 @@ export class User {
 
   @Column({ name: 'whatsapp_id', type: 'text' })
   whatsAppId: string;
+
+  @Column({ name: 'supabase_id', type: 'varchar', length: 255, nullable: true })
+  supabaseId: string;
 
   @Column({ type: 'text' })
   token: string;

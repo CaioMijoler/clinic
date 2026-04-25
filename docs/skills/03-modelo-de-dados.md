@@ -27,7 +27,8 @@ Client
 | token | varchar | JWT token atual (invalidado no logout) |
 | whatsAppId | varchar | ID do dispositivo WhatsApp vinculado |
 | whatsAppToken | varchar | Token de acesso WhatsApp |
-| credentials | json | Credenciais Google Service Account para Calendar |
+| clientEmail | text | Email da Google Service Account para Calendar |
+| privateKey | text | Chave privada da Google Service Account para Calendar |
 | calendarId | varchar | ID do calendário Google associado ao usuário |
 | created_at | timestamp | |
 | updated_at | timestamp | |
@@ -76,7 +77,6 @@ Client
 | client_id | int FK | → clients.id |
 | user_id | int FK | → users.id |
 | status | varchar | Enum: CREATED / SCHEDULED / CANCELED / CANCELED_SCHEDULE / CONFIRMED_SCHEDULE / IN_PROGRESS / CONCLUDED |
-| attendance_status | enum | Enum: PENDING / CONFIRMED / NO_SHOW (default: PENDING) |
 | confirmation_token | varchar(255) | Token UUID para link de confirmação de presença (nullable) |
 | confirmed_at | timestamp | Data/hora da confirmação de presença (nullable) |
 | reminder_sent_at | timestamp | Data/hora do envio do lembrete WhatsApp (nullable) |
@@ -180,8 +180,7 @@ enum MedicalRecordStatusEnum {
 | 1728763238534 | feedback.ts | Tabela `feedback` |
 | 1728764877475 | medical-record-pathologies.ts | Tabela pivô |
 | 1728764903649 | medical-record-questions.ts | Tabela pivô |
-| 1733775454390 | client-address.ts | Tabela `client_address` |
-| 1713000000000 | add-attendance-confirmation.ts | Colunas `attendance_status`, `confirmation_token`, `confirmed_at` em `medical_record` |
+| 1733775454390 | client-address.ts | Tabela `client_address` |`confirmation_token`, `confirmed_at` em `medical_record` |
 | 1745343600000 | add-reminder-sent-at.ts | Coluna `reminder_sent_at` em `medical_record` |
 
 ## Comandos de Migration

@@ -51,11 +51,6 @@ export class CreateUserDto {
   privateKey: string;
 
   @ApiProperty()
-  @IsJSON()
-  @IsOptional()
-  credentials: Record<string, any>;
-
-  @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('Agenda Google Id') })
   @IsOptional()
   calendarId: string;

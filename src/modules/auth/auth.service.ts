@@ -10,48 +10,83 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { decryptText } from '@app/utils/helpers';
+import { ConfigService } from '@nestjs/config';
+import { RedisService } from '@app/cache/redis.service';
+import { SupabaseService } from './supabase.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
-    private jwtService: JwtService,
-  ) {}
+    private readonly jwtService: JwtService,
+    private readonly redisService: RedisService,
+    private readonly supabaseService: SupabaseService,
+    private readonly configService: ConfigService,
+  ) { }
 
   async auth(loginDto: LoginDto): Promise<User> {
-    const user = await this.userRepository.findOne({
-      where: { email: loginDto.username },
-    });
-
-    if (!user?.id) {
-      throw new BadRequestException(
-        'Não conseguimos encontrar este usuário, entre em contato com um administrador',
-      );
-    }
     try {
-      if ((await decryptText(user?.password)) !== loginDto?.password) {
-        throw new UnauthorizedException('Usuário ou Senha Inválidos');
+      const provider = this.configService.get<string>('auth.provider');
+      let accessToken: string;
+      let user: User;
+
+      if (provider === 'supabase') {
+        const { data, error } = await this.supabaseService.getClient().auth.signInWithPassword({
+          email: loginDto.username,
+          password: loginDto.password,
+        });
+
+        if (error) {
+          throw new UnauthorizedException('Usuário ou Senha Inválidos');
+        }
+
+        accessToken = data.session.access_token;
+        user = await this.userRepository.findOne({
+          where: { email: loginDto.username },
+        });
+      } else {
+        // Local authentication
+        user = await this.userRepository.findOne({
+          where: { email: loginDto.username },
+        });
+        if (!user) {
+          throw new UnauthorizedException('Usuário ou Senha Inválidos');
+        }
+        const isPasswordValid = (await decryptText(user.password)) === loginDto.password;
+        if (!isPasswordValid) {
+          throw new UnauthorizedException('Usuário ou Senha Inválidos');
+        }
+
+        const payload = { sub: user.id, email: user.email };
+
+        accessToken = this.jwtService.sign(payload, {
+          secret: this.configService.get('auth.jwtSecret'),
+          expiresIn: '1d',
+        });
       }
 
-      const payload = { sub: user.id, email: user.email };
+      if (!user) {
+        throw new BadRequestException('Usuário não sincronizado no sistema local.');
+      }
 
-      const access_token = await this.jwtService.sign(payload, {
-        secret: process.env.JWT_SECRET,
-        expiresIn: '1 days',
+      await this.userRepository.update(user.id, {
+        token: accessToken,
       });
 
-      this.userRepository.update(user.id, {
-        token: access_token,
-      });
+      const ttl = this.configService.get<number>('auth.tokenTtl');
+
+      await this.redisService.set(`auth_token:${accessToken}`, JSON.stringify(user), ttl);
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...userData } = user;
       return {
         ...userData,
-        token: access_token,
+        token: accessToken,
       };
     } catch (error) {
-      const message: string = 'Verifique suas credenciais e tente novamente!';
+      const message: string = error instanceof UnauthorizedException
+        ? error.message
+        : 'Verifique suas credenciais e tente novamente!';
       Logger.error({ message, error });
       throw new BadRequestException(message);
     }
@@ -64,10 +99,15 @@ export class AuthService {
       const user = await this.userRepository.findOne({
         where: { token: token },
       });
+      if (user) {
+        await this.userRepository.update(user.id, {
+          token: null,
+        });
+      }
 
-      await this.userRepository.update(user.id, {
-        token: null,
-      });
+      // 2. Remove from Redis
+      const key = `auth_token:${token}`;
+      await this.redisService.set(key, '', 0);
 
       return 'Usuário deslogado com sucesso';
     } catch (error) {
@@ -81,25 +121,54 @@ export class AuthService {
   async verifyToken(accessToken: string): Promise<User> {
     try {
       const token = this.extractTokenFromHeader(accessToken);
-      await this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET,
-      });
+      const provider = this.configService.get<string>('auth.provider');
 
-      const user = await this.userRepository.findOne({
-        where: { token: token },
-      });
-      if (!user?.id) {
-        throw new UnauthorizedException('Usuário ou Senha Inválidos');
+      // 1. Check Redis first
+      const cachedUser = await this.redisService.get(`auth_token:${token}`);
+      if (cachedUser) {
+        return JSON.parse(cachedUser);
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      let email: string;
+
+      if (provider === 'supabase') {
+        const { data, error } = await this.supabaseService.getClient().auth.getUser(token);
+        if (error || !data.user) {
+          throw new UnauthorizedException('Token de acesso inválido ou expirado!');
+        }
+        email = data.user.email;
+      } else {
+        try {
+          const payload = this.jwtService.verify(token, {
+            secret: this.configService.get('auth.jwtSecret'),
+          });
+          email = payload.email;
+        } catch (e) {
+          throw new UnauthorizedException('Token de acesso inválido ou expirado!');
+        }
+      }
+
+      // 2. Find in DB and re-cache
+      const user = await this.userRepository.findOne({
+        where: { email },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Usuário não encontrado!');
+      }
+
       const { password, ...userData } = user;
-      return userData;
+      const ttl = this.configService.get<number>('auth.tokenTtl');
+      await this.redisService.set(`auth_token:${token}`, JSON.stringify(userData), ttl);
+
+      return userData as User;
     } catch (error: unknown) {
-      const message: string = 'Token de acesso expirado!';
+      const message: string = error instanceof UnauthorizedException
+        ? error.message
+        : 'Token de acesso expirado!';
       Logger.error(message, error instanceof Error ? error.stack : undefined);
 
-      throw new UnauthorizedException(error);
+      throw new UnauthorizedException(message);
     }
   }
 

@@ -24,9 +24,9 @@ E `users.calendarId` com o ID do calendário Google vinculado ao médico.
 ```typescript
 // CalendarService.googleAuth(user)
 const auth = new google.auth.JWT(
-  credentials.client_email,
+  user.client_email,
   null,
-  credentials.private_key,
+  user.private_key,
   SCOPES, // = CALENDAR_URL env
 );
 this.calendar = google.calendar({ version: 'v3', auth });
@@ -36,7 +36,7 @@ this.calendar = google.calendar({ version: 'v3', auth });
 
 ```
 POST /v1/calendar
-  1. Valida usuário autenticado (busca credentials + calendarId)
+  1. Valida usuário autenticado (busca clientEmail, privateKey e calendarId)
   2. Valida que o Client existe (via clientId)
   3. Valida MedicalRecord se medicalRecordId informado (opcional)
   4. Autentica no Google Calendar via Service Account

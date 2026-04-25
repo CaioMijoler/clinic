@@ -1,14 +1,16 @@
-import { Module } from '@nestjs/common';
-import { AuthController } from './auth.controller';
+import { CacheModule } from '@app/cache/cache.module';
+import { SupabaseService } from './supabase.service';
 import { AuthService } from './auth.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../user/entities/user.entity';
+import { AuthController } from './auth.controller';
 import { JwtService } from '@nestjs/jwt';
+import { Module } from '@nestjs/common';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User])],
+  imports: [TypeOrmModule.forFeature([User]), CacheModule],
   controllers: [AuthController],
-  providers: [AuthService, JwtService],
-  exports: [AuthService],
+  providers: [AuthService, JwtService, SupabaseService],
+  exports: [AuthService, SupabaseService],
 })
 export class AuthModule {}

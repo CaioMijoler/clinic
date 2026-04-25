@@ -63,7 +63,6 @@ Armazena as consultas e prontuários médicos.
 | `client_id` | `int` | ID do paciente. |
 | `user_id` | `int` | ID do profissional. |
 | `status` | `varchar(255)` | Status (created, scheduled, canceled, etc.). |
-| `attendance_status` | `enum` | Status de presença (PENDING, CONFIRMED, NO_SHOW). |
 | `confirmation_token` | `varchar(255)` | Token para confirmação via WhatsApp. |
 | `confirmed_at` | `timestamp` | Data da confirmação de presença. |
 | `reminder_sent_at` | `timestamp` | Data do último lembrete enviado. |

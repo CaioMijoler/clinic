@@ -7,15 +7,36 @@ import { User } from './entities/user.entity';
 import { FilterUserDto } from './dto/filter-user.dto';
 import { decryptText, encrypt } from '@app/utils/helpers';
 
+import { SupabaseService } from '../auth/supabase.service';
+
+import { ConfigService } from '@nestjs/config';
+
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly supabaseService: SupabaseService,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     try {
+      const provider = this.configService.get<string>('auth.provider');
+      let supabaseId: string | null = null;
+
+      if (provider === 'supabase') {
+        const { data, error } = await this.supabaseService.getClient().auth.signUp({
+          email: createUserDto.email,
+          password: createUserDto.password,
+        });
+
+        if (error) {
+          throw new BadRequestException(`Erro ao criar usuário no Supabase: ${error.message}`);
+        }
+        supabaseId = data.user.id;
+      }
+
       const user = new User();
       user.name = createUserDto?.name;
       user.password = await encrypt(createUserDto?.password);
@@ -28,15 +49,14 @@ export class UserService {
       user.clientEmail = createUserDto?.clientEmail;
       user.privateKey = createUserDto?.privateKey;
       user.whatsAppId = createUserDto?.whatsAppId;
-      user.whatsAppToken = createUserDto?.whatsAppId;
+      user.whatsAppToken = createUserDto?.whatsAppToken;
+      user.supabaseId = supabaseId;
 
       return await this.userRepository.save(user);
     } catch (error) {
       Logger.error(error.message);
-      throw new BadRequestException('Ocorreu um erro ao criar o usuário.', {
-        cause: new Error(),
-        description: error,
-      });
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException('Ocorreu um erro ao criar o usuário.');
     }
   }
 
@@ -77,9 +97,27 @@ export class UserService {
 
     try {
       if (updateUserDto) {
+        const provider = this.configService.get<string>('auth.provider');
+        // 1. Update in Supabase if using supabase provider and email/password changed
+        if (provider === 'supabase' && (updateUserDto.email || updateUserDto.password)) {
+          const { error } = await this.supabaseService.getClient().auth.admin.updateUserById(
+            userToUpdate.supabaseId,
+            {
+              email: updateUserDto.email,
+              password: updateUserDto.password,
+            },
+          );
+
+          if (error) {
+            throw new BadRequestException(`Erro ao atualizar no Supabase: ${error.message}`);
+          }
+        }
+
+        // 2. Update local data
         userToUpdate.name = updateUserDto?.name || userToUpdate.name;
-        userToUpdate.password =
-          (await encrypt(updateUserDto?.password)) || userToUpdate.password;
+        if (updateUserDto.password) {
+          userToUpdate.password = await encrypt(updateUserDto.password);
+        }
         userToUpdate.document =
           updateUserDto?.document || userToUpdate.document;
         userToUpdate.email = updateUserDto?.email || userToUpdate.email;
@@ -103,10 +141,8 @@ export class UserService {
     } catch (error) {
       const errorMessage = 'Ocorreu um erro ao atualizar o usuário.';
       Logger.error(errorMessage, error);
-      throw new BadRequestException(errorMessage, {
-        cause: new Error(),
-        description: error,
-      });
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException(errorMessage);
     }
   }
 
@@ -121,10 +157,21 @@ export class UserService {
     }
 
     try {
+      const provider = this.configService.get<string>('auth.provider');
+      // 1. Delete from Supabase if using supabase provider
+      if (provider === 'supabase' && user.supabaseId) {
+        const { error } = await this.supabaseService.getClient().auth.admin.deleteUser(user.supabaseId);
+        if (error) {
+          throw new BadRequestException(`Erro ao remover do Supabase: ${error.message}`);
+        }
+      }
+
+      // 2. Delete local user
       await this.userRepository.remove(user);
     } catch (error) {
       const errorMessage = 'Ocorreu um erro ao remover usuário.';
       Logger.error(errorMessage, error);
+      if (error instanceof BadRequestException) throw error;
       throw new BadRequestException(errorMessage);
     }
   }

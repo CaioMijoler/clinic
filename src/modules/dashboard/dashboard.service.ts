@@ -53,7 +53,7 @@ export class DashboardService {
         where: {
           userId,
           startDate: Between(startDate, endDate),
-          attendanceStatus: AttendanceStatusEnum.CONFIRMED,
+          status: MedicalRecordStatusEnum.CONFIRMED_SCHEDULE,
         },
       }),
 

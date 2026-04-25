@@ -3,7 +3,7 @@ export default () => {
   const logLevel = process.env.LOG_LEVEL ?? 'debug';
 
   const database = {
-    type: 'mysql',
+    type: (process.env.DB_TYPE as any) ?? 'postgres',
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT),
     database: process.env.DB_NAME,
@@ -27,6 +27,20 @@ export default () => {
     },
     database: {
       ...database,
+    },
+    auth: {
+      provider: process.env.AUTH_PROVIDER ?? 'local',
+      tokenTtl: Number(process.env.AUTH_TOKEN_TTL) || 86400,
+      jwtSecret: process.env.JWT_SECRET ?? 'clinical',
+    },
+    supabase: {
+      url: process.env.SUPABASE_URL,
+      key: process.env.SUPABASE_KEY,
+      bucket: process.env.SUPABASE_BUCKET ?? 'clinic-files',
+    },
+    redis: {
+      host: process.env.REDIS_HOST ?? 'localhost',
+      port: Number(process.env.REDIS_PORT) ?? 6379,
     },
     cripto: {
       alg: process.env.CRIPTO_ALG,

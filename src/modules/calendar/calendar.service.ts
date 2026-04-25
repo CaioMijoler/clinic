@@ -255,11 +255,11 @@ export class CalendarService {
         );
       }
 
-      if (medicalRecord.attendanceStatus === AttendanceStatusEnum.CONFIRMED) {
+      if (medicalRecord.status === MedicalRecordStatusEnum.CONFIRMED_SCHEDULE) {
         throw new BadRequestException('Presença já foi confirmada');
       }
 
-      medicalRecord.attendanceStatus = AttendanceStatusEnum.CONFIRMED;
+      medicalRecord.status = MedicalRecordStatusEnum.CONFIRMED_SCHEDULE;
       medicalRecord.confirmedAt = new Date();
 
       await this.medicalRecordRepository.save(medicalRecord);

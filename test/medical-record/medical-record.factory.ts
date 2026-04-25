@@ -14,7 +14,6 @@ export function makeUser(overrides: Partial<User> = {}): User {
     token: 'valid_token',
     whatsAppId: null,
     whatsAppToken: null,
-    credentials: null,
     calendarId: null,
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',

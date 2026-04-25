@@ -87,14 +87,6 @@ export class MedicalRecord {
   status: string;
 
   @Column({
-    name: 'attendance_status',
-    type: 'enum',
-    enum: AttendanceStatusEnum,
-    default: AttendanceStatusEnum.PENDING,
-  })
-  attendanceStatus: AttendanceStatusEnum;
-
-  @Column({
     name: 'confirmation_token',
     type: 'varchar',
     length: 255,
