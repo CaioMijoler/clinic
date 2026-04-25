@@ -22,6 +22,8 @@ import { QuestionsModule } from './modules/questions/questions.module';
 import { TreatmentModule } from './modules/treatment/treatment.module';
 import { PathologiesModule } from './modules/pathologies/pathologies.module';
 import { MedicalRecordModule } from './modules/medical-record/medical-record.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { CacheModule } from './cache/cache.module';
 
 @Module({
   imports: [
@@ -45,6 +47,8 @@ import { MedicalRecordModule } from './modules/medical-record/medical-record.mod
     TreatmentModule,
     PathologiesModule,
     MedicalRecordModule,
+    DashboardModule,
+    CacheModule,
   ],
 })
 export class AppModule implements NestModule {

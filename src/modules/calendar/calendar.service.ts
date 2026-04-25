@@ -214,7 +214,6 @@ export class CalendarService {
 
   async googleAuth(user: User): Promise<void> {
     const SCOPES = this.configService.get<string>('calendar.url');
-
     this.auth = new google.auth.JWT({
       email: user.clientEmail,
       key: user.privateKey,
