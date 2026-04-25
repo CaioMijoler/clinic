@@ -12,7 +12,7 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
         return {
           ...(configService.get('database') as TypeOrmModuleOptions),
           migrations: [`${__dirname}/migrations/*{.ts,.js}`],
-          entities: [`${__dirname}'/../modules/**/*.entity{.ts,.js}`],
+          entities: [`${__dirname}/../modules/**/*.entity{.ts,.js}`],
           migrationsRun: true,
         };
       },

@@ -15,7 +15,6 @@ import { User } from '../user/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { MedicalRecord } from '../medical-record/entities/medical-record.entity';
 import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
-import { AttendanceStatusEnum } from '../../utils/enum/attendance.enum';
 import { Client } from '../clients/entities/client.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-resume.dto';
@@ -108,7 +107,7 @@ export class CalendarService {
       });
 
       return response['data'];
-    } catch (error) {
+    } catch (error: Error | any) {
       const message = `Ocorreu um erro ao criar o evento. Mais Detalhes: ${JSON.stringify(error?.errors) ?? error?.response?.message}`;
       if (error instanceof HttpException) throw error;
       Logger.error(message, error?.stack ?? error?.message);
@@ -116,7 +115,10 @@ export class CalendarService {
     }
   }
 
-  async findAll(queryParams: FilterCalendarDto, user: User): Promise<ResponseMedicalRecordResumeDto[]> {
+  async findAll(
+    queryParams: FilterCalendarDto,
+    user: User,
+  ): Promise<ResponseMedicalRecordResumeDto[]> {
     try {
       const userAuth = await this.dataSource.manager.findOne(User, {
         where: { id: user.id },
@@ -145,7 +147,7 @@ export class CalendarService {
       });
 
       const recordsMap = new Map(
-        records.map((record) => [record.calendarGoogleId, record])
+        records.map((record) => [record.calendarGoogleId, record]),
       );
 
       const enrichedItems = items.map((item) =>
@@ -165,7 +167,7 @@ export class CalendarService {
     try {
       const userAuth = await this.dataSource.manager.findOne(User, {
         where: { id: user.id },
-        select: ['id', 'name',  'clientEmail', 'privateKey', , 'calendarId'],
+        select: ['id', 'name', 'clientEmail', 'privateKey', , 'calendarId'],
       });
 
       if (!userAuth) {
@@ -255,11 +257,19 @@ export class CalendarService {
         );
       }
 
+<<<<<<< HEAD
       if (medicalRecord.status === MedicalRecordStatusEnum.CONFIRMED_SCHEDULE) {
         throw new BadRequestException('Presença já foi confirmada');
       }
 
       medicalRecord.status = MedicalRecordStatusEnum.CONFIRMED_SCHEDULE;
+=======
+      if (medicalRecord.status === 'CONFIRMED') {
+        throw new BadRequestException('Presença já foi confirmada');
+      }
+
+      medicalRecord.status = 'CONFIRMED';
+>>>>>>> e7c2d814d5ef6e16eb32034bf4f9c953f544d468
       medicalRecord.confirmedAt = new Date();
 
       await this.medicalRecordRepository.save(medicalRecord);
@@ -318,7 +328,10 @@ export class CalendarService {
     }
   }
 
-   private mapToEventDto(item: any, medicalRecord?: MedicalRecord): ResponseMedicalRecordResumeDto {
+  private mapToEventDto(
+    item: any,
+    medicalRecord?: MedicalRecord,
+  ): ResponseMedicalRecordResumeDto {
     return {
       id: item.id,
       title: item.summary,
