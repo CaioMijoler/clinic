@@ -5,7 +5,6 @@ import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth 
 import { MedicalRecord } from '../medical-record/entities/medical-record.entity';
 import { User } from '../user/entities/user.entity';
 import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
-import { AttendanceStatusEnum } from '../../utils/enum/attendance.enum';
 
 import { DashboardFilterDto, DashboardPeriodEnum } from './dto/dashboard-filter.dto';
 
