@@ -10,9 +10,16 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
-    this.redisClient = new Redis({
+    const redisConfig = {
       host: this.configService.get<string>('redis.host'),
       port: this.configService.get<number>('redis.port'),
+      password: this.configService.get<string>('redis.password'),
+    };
+
+    // Upstash e outros provedores remotos geralmente exigem TLS (Rediss)
+    this.redisClient = new Redis({
+      ...redisConfig,
+      ...(redisConfig.host !== 'localhost' ? { tls: { rejectUnauthorized: false } } : {}),
     });
 
     this.redisClient.on('connect', () => {

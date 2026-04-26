@@ -29,13 +29,11 @@ export class AuthService {
       const provider = this.configService.get<string>('auth.provider');
       let accessToken: string;
       let user: User;
-
       if (provider === 'supabase') {
         const { data, error } = await this.supabaseService.getClient().auth.signInWithPassword({
           email: loginDto.username,
           password: loginDto.password,
         });
-
         if (error) {
           throw new UnauthorizedException('Usuário ou Senha Inválidos');
         }
@@ -45,7 +43,6 @@ export class AuthService {
           where: { email: loginDto.username },
         });
       } else {
-        // Local authentication
         user = await this.userRepository.findOne({
           where: { email: loginDto.username },
         });
@@ -122,7 +119,6 @@ export class AuthService {
     try {
       const token = this.extractTokenFromHeader(accessToken);
       const provider = this.configService.get<string>('auth.provider');
-
       // 1. Check Redis first
       const cachedUser = await this.redisService.get(`auth_token:${token}`);
       if (cachedUser) {

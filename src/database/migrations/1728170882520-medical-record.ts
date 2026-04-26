@@ -79,6 +79,16 @@ export class MedicalRecord1728170882520 implements MigrationInterface {
             default: 'now()',
           },
           {
+            name: 'confirmation_token',
+            type: 'text',
+            isNullable: true,
+          },
+          {
+            name: 'confirmed_at',
+            type: 'timestamp',
+            isNullable: true,
+          },
+          {
             name: 'updated_at',
             type: 'timestamp',
             default: 'now()',

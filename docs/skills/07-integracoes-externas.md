@@ -234,12 +234,14 @@ async sendReminderMessages() {
 
 ### Confirmação de Presença
 
-**Enum:** `AttendanceStatusEnum` (`src/utils/enum/attendance.enum.ts`)
+**Enum:** `MedicalRecordStatusEnum` (`src/utils/enum/medical-record.enum.ts`)
 ```typescript
-enum AttendanceStatusEnum {
-  PENDING = 'PENDING',       // Aguardando confirmação (default)
-  CONFIRMED = 'CONFIRMED',   // Presença confirmada pelo paciente
-  NO_SHOW = 'NO_SHOW',       // Paciente não compareceu
+enum MedicalRecordStatusEnum {
+  PENDING = 'PENDING',
+  SCHEDULED = 'SCHEDULED',
+  CONFIRMED = 'CONFIRMED',
+  NO_SHOW = 'NO_SHOW',
+  CANCELED = 'CANCELED',
 }
 ```
 
@@ -254,7 +256,7 @@ enum AttendanceStatusEnum {
 ```
 1. POST /v1/calendar/:eventId/confirm-attendance { token: "uuid-xxx" }
 2. Valida: MedicalRecord.id == eventId AND confirmationToken == token
-3. Atualiza: attendanceStatus = CONFIRMED, confirmedAt = new Date()
+3. Atualiza: MedicalRecord.status = CONFIRMED, confirmedAt = new Date()
 4. Loga notificação para o profissional (TODO: envio WhatsApp/email)
 ```
 

@@ -10,6 +10,7 @@ export default () => {
     password: process.env.DB_PASSWORD,
     username: process.env.DB_USER,
     logging: logLevel === 'debug',
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
   };
 
   return {
@@ -30,7 +31,7 @@ export default () => {
     },
     auth: {
       provider: process.env.AUTH_PROVIDER ?? 'local',
-      tokenTtl: Number(process.env.AUTH_TOKEN_TTL) || 86400,
+      tokenTtl: process.env.AUTH_TOKEN_TTL || 86400,
       jwtSecret: process.env.JWT_SECRET ?? 'clinical',
     },
     supabase: {
@@ -41,6 +42,7 @@ export default () => {
     redis: {
       host: process.env.REDIS_HOST ?? 'localhost',
       port: Number(process.env.REDIS_PORT) ?? 6379,
+      password: process.env.REDIS_PASSWORD,
     },
     cripto: {
       alg: process.env.CRIPTO_ALG,

@@ -18,7 +18,6 @@ Client
 
 ## Entidade: `users` (User)
 
-<<<<<<< HEAD
 | Coluna | Tipo | Descrição |
 |---|---|---|
 | id | int PK | Identificador |
@@ -33,21 +32,6 @@ Client
 | calendarId | varchar | ID do calendário Google associado ao usuário |
 | created_at | timestamp | |
 | updated_at | timestamp | |
-=======
-| Coluna        | Tipo      | Descrição                                        |
-| ------------- | --------- | ------------------------------------------------ |
-| id            | int PK    | Identificador                                    |
-| name          | varchar   | Nome do médico/assistente                        |
-| email         | varchar   | Email (usado no login)                           |
-| password      | varchar   | Senha criptografada (cripto lib)                 |
-| token         | varchar   | JWT token atual (invalidado no logout)           |
-| whatsAppId    | varchar   | ID do dispositivo WhatsApp vinculado             |
-| whatsAppToken | varchar   | Token de acesso WhatsApp                         |
-| credentials   | json      | Credenciais Google Service Account para Calendar |
-| calendarId    | varchar   | ID do calendário Google associado ao usuário     |
-| created_at    | timestamp |                                                  |
-| updated_at    | timestamp |                                                  |
->>>>>>> e7c2d814d5ef6e16eb32034bf4f9c953f544d468
 
 ## Entidade: `clients` (Client — Paciente)
 
@@ -79,7 +63,6 @@ Client
 
 ## Entidade: `medical_record` (MedicalRecord — Prontuário)
 
-<<<<<<< HEAD
 | Coluna | Tipo | Descrição |
 |---|---|---|
 | id | int PK | |
@@ -99,27 +82,6 @@ Client
 | reminder_sent_at | timestamp | Data/hora do envio do lembrete WhatsApp (nullable) |
 | created_at | timestamp | |
 | updated_at | timestamp | |
-=======
-| Coluna                  | Tipo         | Descrição                                                                                               |
-| ----------------------- | ------------ | ------------------------------------------------------------------------------------------------------- |
-| id                      | int PK       |                                                                                                         |
-| calendar_google_id      | text         | ID do evento no Google Calendar                                                                         |
-| title                   | varchar(255) | Título do agendamento                                                                                   |
-| start_date              | timestamp    | Data/hora início consulta                                                                               |
-| end_date                | timestamp    | Data/hora fim consulta                                                                                  |
-| symptoms                | text         | Descrição dos sintomas (máx 900 chars)                                                                  |
-| clinical_exam           | text         | Exame clínico (preenchido pelo médico) (máx 900 chars)                                                  |
-| completed_clinical_exam | text         | Conclusão do exame clínico (máx 900 chars)                                                              |
-| conclusion              | text         | Conclusão do prontuário (máx 900 chars)                                                                 |
-| client_id               | int FK       | → clients.id                                                                                            |
-| user_id                 | int FK       | → users.id                                                                                              |
-| status                  | varchar      | Enum: CREATED / SCHEDULED / CANCELED / CANCELED_SCHEDULE / CONFIRMED_SCHEDULE / IN_PROGRESS / CONCLUDED |
-| confirmation_token      | varchar(255) | Token UUID para link de confirmação de presença (nullable)                                              |
-| confirmed_at            | timestamp    | Data/hora da confirmação de presença (nullable)                                                         |
-| reminder_sent_at        | timestamp    | Data/hora do envio do lembrete WhatsApp (nullable)                                                      |
-| created_at              | timestamp    |                                                                                                         |
-| updated_at              | timestamp    |                                                                                                         |
->>>>>>> e7c2d814d5ef6e16eb32034bf4f9c953f544d468
 
 **Relações:**
 
@@ -208,7 +170,6 @@ enum MedicalRecordStatusEnum {
 
 ## Migrations Existentes (ordem cronológica)
 
-<<<<<<< HEAD
 | Timestamp | Arquivo | Cria/Altera |
 |---|---|---|
 | 1714602960508 | users.ts | Tabela `users` |
@@ -222,22 +183,6 @@ enum MedicalRecordStatusEnum {
 | 1728764903649 | medical-record-questions.ts | Tabela pivô |
 | 1733775454390 | client-address.ts | Tabela `client_address` |`confirmation_token`, `confirmed_at` em `medical_record` |
 | 1745343600000 | add-reminder-sent-at.ts | Coluna `reminder_sent_at` em `medical_record` |
-=======
-| Timestamp     | Arquivo                        | Cria/Altera                                                                           |
-| ------------- | ------------------------------ | ------------------------------------------------------------------------------------- |
-| 1714602960508 | users.ts                       | Tabela `users`                                                                        |
-| 1714602978514 | clients.ts                     | Tabela `clients`                                                                      |
-| 1728170882520 | medical-record.ts              | Tabela `medical_record`                                                               |
-| 1728171159644 | pathologies.ts                 | Tabela `pathologies`                                                                  |
-| 1728171322002 | treatment.ts                   | Tabela `treatment`                                                                    |
-| 1728180646238 | questions.ts                   | Tabela `questions`                                                                    |
-| 1728763238534 | feedback.ts                    | Tabela `feedback`                                                                     |
-| 1728764877475 | medical-record-pathologies.ts  | Tabela pivô                                                                           |
-| 1728764903649 | medical-record-questions.ts    | Tabela pivô                                                                           |
-| 1733775454390 | client-address.ts              | Tabela `client_address`                                                               |
-| 1713000000000 | add-attendance-confirmation.ts | Colunas `attendance_status`, `confirmation_token`, `confirmed_at` em `medical_record` |
-| 1745343600000 | add-reminder-sent-at.ts        | Coluna `reminder_sent_at` em `medical_record`                                         |
->>>>>>> e7c2d814d5ef6e16eb32034bf4f9c953f544d468
 
 ## Comandos de Migration
 

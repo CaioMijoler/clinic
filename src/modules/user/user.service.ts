@@ -26,9 +26,17 @@ export class UserService {
       let supabaseId: string | null = null;
 
       if (provider === 'supabase') {
-        const { data, error } = await this.supabaseService.getClient().auth.signUp({
+        const { data, error } = await this.supabaseService.getClient().auth.admin.createUser({
           email: createUserDto.email,
-          password: createUserDto.password,
+          password: createUserDto?.password,
+          email_confirm: true,
+          phone: createUserDto?.telephone,
+          role: createUserDto?.type,
+          user_metadata: {
+            name: createUserDto?.name,
+            document: createUserDto?.document,
+            status: createUserDto?.status,
+          },
         });
 
         if (error) {
@@ -98,7 +106,7 @@ export class UserService {
     try {
       if (updateUserDto) {
         const provider = this.configService.get<string>('auth.provider');
-        // 1. Update in Supabase if using supabase provider and email/password changed
+
         if (provider === 'supabase' && (updateUserDto.email || updateUserDto.password)) {
           const { error } = await this.supabaseService.getClient().auth.admin.updateUserById(
             userToUpdate.supabaseId,
@@ -158,7 +166,6 @@ export class UserService {
 
     try {
       const provider = this.configService.get<string>('auth.provider');
-      // 1. Delete from Supabase if using supabase provider
       if (provider === 'supabase' && user.supabaseId) {
         const { error } = await this.supabaseService.getClient().auth.admin.deleteUser(user.supabaseId);
         if (error) {
@@ -166,7 +173,6 @@ export class UserService {
         }
       }
 
-      // 2. Delete local user
       await this.userRepository.remove(user);
     } catch (error) {
       const errorMessage = 'Ocorreu um erro ao remover usuário.';

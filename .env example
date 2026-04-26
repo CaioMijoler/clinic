@@ -24,23 +24,14 @@ DB_PORT=3306
 DB_NAME=clinical
 DB_USER=gabriel
 DB_PASSWORD=Gsm302554
+DB_SSL=true
 PORT=3001
 JWT_SECRET=seu-secret-jwt-aqui
 
-# DB_HOST=bzeu6loslws75rkcbz1f-mysql.services.clever-cloud.com
-# DB_NAME=bzeu6loslws75rkcbz1f
-# DB_USER=ua4uhbajz2bwjcmr
-# DB_PORT=3306
-# DB_PASSWORD=EfTihU9Yu9OoWeelbNNH
-
-  # DB_HOST=umabrisfx8afs3ja.cbetxkdyhwsb.us-east-1.rds.amazonaws.com
-  # DB_NAME=dk4n3gaglsnguci2
-  # DB_USER=p1bf5lbxoeejm0g7
-  # DB_PORT=3306
-  # DB_PASSWORD=jf84i2p51nlysksz
 AUTH_TOKEN_TTL=86400
 REDIS_HOST=localhost
 REDIS_PORT=6379
+REDIS_PASSWORD=
 CRIPTO_ALG=aes-256-ctr
 ENCRYPT_SECRET_KEY=8e6f4eae6ad1894069b750413a5862da5fd9e0193c521d0d6bb2a083a0b50709
 ENCRYPT_IV=8d581a0799756ee5a5a9ec3153d3082c
@@ -48,3 +39,6 @@ ENCRYPT_IV=8d581a0799756ee5a5a9ec3153d3082c
 SUPABASE_URL=sua_url
 SUPABASE_KEY=sua_key
 SUPABASE_BUCKET=sua_bucketAUTH_TOKEN_TTL=86400
+
+CRON_SECRET=f9yzV3CkmfxbPUzYtBxYw5aixMJsEZGB
+FRONTEND_URL=http://localhost:3000

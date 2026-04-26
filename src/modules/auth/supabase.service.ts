@@ -8,15 +8,25 @@ export class SupabaseService {
   private readonly logger = new Logger(SupabaseService.name);
 
   constructor(private readonly configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('supabase.url');
-    const supabaseKey = this.configService.get<string>('supabase.key');
+  // Pega a URL e remove qualquer barra ou sufixo /rest/v1/ se existir
+  const rawUrl = this.configService.get<string>('SUPABASE_URL');
+  const supabaseUrl = rawUrl?.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
 
-    if (!supabaseUrl || !supabaseKey) {
-      this.logger.error('Supabase URL or Key is missing in environment variables');
-    } else {
-      this.supabase = createClient(supabaseUrl, supabaseKey);
-    }
+  // PARA O ADMIN FUNCIONAR: Esta chave PRECISA ser a "service_role" (sb_secret_...)
+  const supabaseKey = this.configService.get<string>('SUPABASE_KEY');
+
+  if (!supabaseUrl || !supabaseKey) {
+    this.logger.error('Supabase URL or Key is missing');
+  } else {
+    this.supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+    this.logger.log(`Supabase inicializado com sucesso em: ${supabaseUrl}`);
   }
+}
 
   getClient(): SupabaseClient {
     return this.supabase;

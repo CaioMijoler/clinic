@@ -7,6 +7,7 @@ import {
   Delete,
   Query,
   Req,
+  BadRequestException,
 } from '@nestjs/common';
 import { CalendarService } from './calendar.service';
 import { Request } from 'express';
@@ -16,10 +17,26 @@ import { FilterCalendarDto } from './dto/filter-calendar.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-resume.dto';
 
+import { CalendarReminderService } from './services/calendar-reminder.service';
+
 @ApiTags('calendar')
 @Controller('v1/calendar')
 export class CalendarController {
-  constructor(private readonly calendarService: CalendarService) {}
+  constructor(
+    private readonly calendarService: CalendarService,
+    private readonly calendarReminderService: CalendarReminderService,
+  ) {}
+
+  @Get('cron/reminders')
+  async triggerReminders(@Req() req: Request) {
+    const authHeader = req.headers['authorization'];
+    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      throw new BadRequestException('Unauthorized cron trigger');
+    }
+
+    await this.calendarReminderService.sendReminderMessages();
+    return { success: true, message: 'Reminders triggered successfully' };
+  }
 
   @Post()
   @ApiBearerAuth()

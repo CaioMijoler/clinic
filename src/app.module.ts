@@ -63,6 +63,9 @@ export class AppModule implements NestModule {
       }, {
         path: 'v1/calendar/:eventId/confirm-attendance',
         method: RequestMethod.POST,
+      }, {
+        path: 'v1/calendar/cron/reminders',
+        method: RequestMethod.GET,
       })
       .forRoutes('*');
   }

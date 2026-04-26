@@ -7,8 +7,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
 
-async function bootstrap() {
-  // Initial Nest Factory app and config log to json format
+export async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: WinstonModule.createLogger(
       createLogger({
@@ -20,7 +19,7 @@ async function bootstrap() {
   });
 
   const configService = app.get<ConfigService>(ConfigService);
-  const port = configService.get('port');
+  const port = configService.get('port') || 3001;
 
   app.enableCors();
   app.useGlobalPipes(
@@ -32,21 +31,25 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
-      .setTitle(process.env.npm_package_name)
-      .setDescription(process.env.npm_package_description)
-      .setVersion(process.env.npm_package_version)
-      .setContact(
-        process.env.npm_package_description,
-        process.env.npm_package_homepage,
-        process.env.npm_package_author,
-      )
+      .setTitle('Clinic API')
+      .setDescription('Clinical Backend System')
+      .setVersion('1.0.0')
       .addBearerAuth()
       .build(),
   );
   SwaggerModule.setup('/', app, document);
 
-  await app.listen(port, () => {
-    Logger.log(`Application started on port: ${port}`, 'Bootstrap');
-  });
+  if (process.env.NODE_ENV !== 'production') {
+    await app.listen(port, () => {
+      Logger.log(`Application started on port: ${port}`, 'Bootstrap');
+    });
+  }
+
+  await app.init();
+  return app.getHttpAdapter().getInstance();
 }
-bootstrap();
+
+// Para execução local
+if (process.env.NODE_ENV !== 'production') {
+  bootstrap();
+}

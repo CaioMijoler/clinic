@@ -130,7 +130,6 @@ export class CalendarService {
       }
 
       await this.googleAuth(userAuth);
-
       const response = await this.calendar.events.list({
         auth: this.auth,
         calendarId: userAuth.calendarId,
@@ -257,19 +256,11 @@ export class CalendarService {
         );
       }
 
-<<<<<<< HEAD
       if (medicalRecord.status === MedicalRecordStatusEnum.CONFIRMED_SCHEDULE) {
         throw new BadRequestException('Presença já foi confirmada');
       }
 
       medicalRecord.status = MedicalRecordStatusEnum.CONFIRMED_SCHEDULE;
-=======
-      if (medicalRecord.status === 'CONFIRMED') {
-        throw new BadRequestException('Presença já foi confirmada');
-      }
-
-      medicalRecord.status = 'CONFIRMED';
->>>>>>> e7c2d814d5ef6e16eb32034bf4f9c953f544d468
       medicalRecord.confirmedAt = new Date();
 
       await this.medicalRecordRepository.save(medicalRecord);

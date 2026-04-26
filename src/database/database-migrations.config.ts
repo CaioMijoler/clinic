@@ -9,5 +9,8 @@ export default async () => {
     password: process.env.DB_PASSWORD,
     username: process.env.DB_USER,
     migrations: [`${__dirname}/migrations/*{.ts,.js}`],
+    ssl: {
+      rejectUnauthorized: false,
+    },
   });
 };
