@@ -57,16 +57,22 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(LoggerMiddleware, AuthMiddleware)
-      .exclude('v1/auth/login', 'health', {
-        path: 'v1/user',
-        method: RequestMethod.POST,
-      }, {
-        path: 'v1/calendar/:eventId/confirm-attendance',
-        method: RequestMethod.POST,
-      }, {
-        path: 'v1/calendar/cron/reminders',
-        method: RequestMethod.GET,
-      })
+      .exclude(
+        'v1/auth/login',
+        'health',
+        {
+          path: 'v1/user',
+          method: RequestMethod.POST,
+        },
+        {
+          path: 'v1/calendar/:eventId/confirm-attendance',
+          method: RequestMethod.POST,
+        },
+        {
+          path: 'v1/calendar/cron/reminders',
+          method: RequestMethod.GET,
+        },
+      )
       .forRoutes('*');
   }
 }

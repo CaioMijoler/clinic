@@ -28,16 +28,18 @@ export async function bootstrap() {
     }),
   );
 
-  const document = SwaggerModule.createDocument(
-    app,
-    new DocumentBuilder()
-      .setTitle('Clinic API')
-      .setDescription('Clinical Backend System')
-      .setVersion('1.0.0')
-      .addBearerAuth()
-      .build(),
-  );
-  SwaggerModule.setup('/', app, document);
+  if (process.env.NODE_ENV !== 'production') {
+    const document = SwaggerModule.createDocument(
+      app,
+      new DocumentBuilder()
+        .setTitle('Clinic API')
+        .setDescription('Clinical Backend System')
+        .setVersion('1.0.0')
+        .addBearerAuth()
+        .build(),
+    );
+    SwaggerModule.setup('/', app, document);
+  }
 
   if (process.env.NODE_ENV !== 'production') {
     await app.listen(port, () => {
