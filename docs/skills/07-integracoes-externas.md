@@ -199,7 +199,7 @@ Caso não possa comparecer, nos avise 😊
 ### Cron Job (CalendarReminderService)
 
 ```typescript
-@Cron('*/5 * * * *')  // Executa a cada 5 minutos
+@Cron('0 0 * * **/5 * * * *')  // Executa a cada 5 minutos
 async sendReminderMessages() {
   const now = new Date();
   const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);

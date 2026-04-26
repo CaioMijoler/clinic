@@ -16,7 +16,7 @@
   "crons": [
     {
       "path": "/v1/calendar/cron/reminders",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
