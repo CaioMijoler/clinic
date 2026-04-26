@@ -1,4 +1,4 @@
-import { CacheModule } from '@app/cache/cache.module';
+import { CacheModule } from '../../cache/cache.module';
 import { SupabaseService } from './supabase.service';
 import { AuthService } from './auth.service';
 import { TypeOrmModule } from '@nestjs/typeorm';

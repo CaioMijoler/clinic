@@ -5,7 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { FilterUserDto } from './dto/filter-user.dto';
-import { decryptText, encrypt } from '@app/utils/helpers';
+import { decryptText, encrypt } from '../../utils/helpers';
 
 import { SupabaseService } from '../auth/supabase.service';
 

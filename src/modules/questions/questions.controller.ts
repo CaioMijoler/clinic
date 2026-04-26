@@ -15,8 +15,8 @@ import {
 } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { FilterDto } from '@app/utils/filter-dto';
-import { IPaginate } from '@app/utils/paginate';
+import { FilterDto } from '../../utils/filter-dto';
+import { IPaginate } from '../../utils/paginate';
 
 @ApiTags('questions')
 @Controller('v1/questions')

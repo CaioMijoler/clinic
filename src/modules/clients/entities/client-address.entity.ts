@@ -1,4 +1,4 @@
-import { Client } from '@modules/clients/entities/client.entity';
+import { Client } from './client.entity';
 import {
   Entity,
   Column,

@@ -1,7 +1,7 @@
-import { MedicalRecord } from '@modules/medical-record/entities/medical-record.entity';
-import { Client } from '@modules/clients/entities/client.entity';
-import { User } from '@modules/user/entities/user.entity';
-import { MedicalRecordStatusEnum } from '@app/utils/enum/medical-record.enum';
+import { MedicalRecord } from '../../src/modules/medical-record/entities/medical-record.entity';
+import { Client } from '../../src/modules/clients/entities/client.entity';
+import { User } from '../../src/modules/user/entities/user.entity';
+import { MedicalRecordStatusEnum } from '../../src/utils/enum/medical-record.enum';
 
 // ─── User Factory ────────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import moment from 'moment';
 import { createCipheriv, createDecipheriv } from 'crypto';
-import appConfig from '@app/config/app.config';
+import appConfig from '../config/app.config';
 
 const generateScheduling = (): string => {
   const orderPrefix = 'SO';

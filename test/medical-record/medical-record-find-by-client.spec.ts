@@ -1,17 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken, getDataSourceToken } from '@nestjs/typeorm';
 import { BadRequestException } from '@nestjs/common';
-import { MedicalRecordService } from '@modules/medical-record/medical-record.service';
-import { MedicalRecord } from '@modules/medical-record/entities/medical-record.entity';
-import { FilterDto } from '@app/utils/filter-dto';
-import * as queryBuilderUtil from '@app/utils/query-builder';
+import { MedicalRecordService } from '../../src/modules/medical-record/medical-record.service';
+import { MedicalRecord } from '../../src/modules/medical-record/entities/medical-record.entity';
+import { FilterDto } from '../../src/utils/filter-dto';
+import * as queryBuilderUtil from '../../src/utils/query-builder';
 import {
   makeMedicalRecord,
   makeMedicalRecordList,
-} from '@test/medical-record/medical-record.factory';
+} from './medical-record.factory';
 
 // ─── Mock do findAllWithQueryBuilder ─────────────────────────────────────────
-jest.mock('@app/utils/query-builder', () => ({
+jest.mock('../../src/utils/query-builder', () => ({
   findAllWithQueryBuilder: jest.fn(),
 }));
 

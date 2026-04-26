@@ -9,9 +9,9 @@ import { User } from '../user/entities/user.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
-import { decryptText } from '@app/utils/helpers';
+import { decryptText } from '../../utils/helpers';
 import { ConfigService } from '@nestjs/config';
-import { RedisService } from '@app/cache/redis.service';
+import { RedisService } from '../../cache/redis.service';
 import { SupabaseService } from './supabase.service';
 
 @Injectable()

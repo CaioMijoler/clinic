@@ -12,9 +12,9 @@ import { UpdateQuestionDto } from './dto/update-question.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Question } from './entities/question.entity';
-import { FilterDto } from '@app/utils/filter-dto';
-import { findAllWithQueryBuilder } from '@app/utils/query-builder';
-import { IPaginate } from '@app/utils/paginate';
+import { FilterDto } from '../../utils/filter-dto';
+import { findAllWithQueryBuilder } from '../../utils/query-builder';
+import { IPaginate } from '../../utils/paginate';
 
 @Injectable()
 export class QuestionsService {
