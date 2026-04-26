@@ -53,3 +53,9 @@ export async function bootstrap() {
 if (process.env.NODE_ENV !== 'production') {
   bootstrap();
 }
+
+// Export default para a Vercel
+export default async (req: any, res: any) => {
+  const server = await bootstrap();
+  return server(req, res);
+};
