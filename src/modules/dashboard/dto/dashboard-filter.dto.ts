@@ -1,10 +1,5 @@
 import { IsEnum, IsOptional } from 'class-validator';
-
-export enum DashboardPeriodEnum {
-  DAY = 'day',
-  WEEK = 'week',
-  MONTH = 'month',
-}
+import { DashboardPeriodEnum } from '../../../utils/enum/dashboard.enum';
 
 export class DashboardFilterDto {
   @IsEnum(DashboardPeriodEnum)

@@ -3,6 +3,7 @@ import { Request } from 'express';
 import { DashboardService } from './dashboard.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { DashboardFilterDto } from './dto/dashboard-filter.dto';
+import { TDashboardStatsResponse } from './dto/dashboard-response.dto';
 
 @ApiTags('dashboard')
 @Controller('v1/dashboard')
@@ -11,7 +12,7 @@ export class DashboardController {
 
   @Get('stats')
   @ApiBearerAuth()
-  getStatistics(@Req() req: Request, @Query() filter: DashboardFilterDto) {
+  getStatistics(@Req() req: Request, @Query() filter: DashboardFilterDto): Promise<TDashboardStatsResponse> {
     return this.dashboardService.getStatistics(req?.user, filter);
   }
 }

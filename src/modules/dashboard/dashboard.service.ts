@@ -6,8 +6,9 @@ import { MedicalRecord } from '../medical-record/entities/medical-record.entity'
 import { User } from '../user/entities/user.entity';
 import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
 
-import { DashboardFilterDto, DashboardPeriodEnum } from './dto/dashboard-filter.dto';
-
+import { DashboardFilterDto } from './dto/dashboard-filter.dto';
+import { DashboardPeriodEnum } from '../../utils/enum/dashboard.enum';
+import { TDashboardStatsResponse } from './dto/dashboard-response.dto';
 @Injectable()
 export class DashboardService {
   constructor(
@@ -15,7 +16,7 @@ export class DashboardService {
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
   ) {}
 
-  async getStatistics(user: User, filter: DashboardFilterDto) {
+  async getStatistics(user: User, filter: DashboardFilterDto): Promise<TDashboardStatsResponse> {
     const now = new Date();
     let startDate: Date;
     let endDate: Date;
