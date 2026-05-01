@@ -1,4 +1,4 @@
-# SKILL: Autenticação JWT e Segurança
+# SKILL: Autenticação via Supabase e Redis
 
 ## Fluxo de Autenticação
 
@@ -7,42 +7,34 @@
        │
        ▼
    AuthService.auth()
-       ├── Busca user por email
-       ├── Descriptografa senha (decryptText) e compara
-       ├── Gera JWT (secret: process.env.JWT_SECRET, expiresIn: '1 days')
-       ├── Salva token no campo users.token
-       └── Retorna user sem password + token
+       ├── Valida credenciais no Supabase (auth.signInWithPassword)
+       ├── Busca usuário correspondente no banco local (sincronização)
+       ├── Gera Token de Acesso (Supabase session token)
+       ├── Armazena dados do usuário no Redis (Cache)
+       └── Retorna usuário + token
 
 2. Requisições autenticadas: Authorization: Bearer <token>
        │
        ▼
    AuthMiddleware → AuthService.verifyToken()
        ├── Extrai token do header (Bearer prefix)
-       ├── jwtService.verify(token, { secret: process.env.JWT_SECRET })
-       ├── Busca user por users.token = token (token ativo)
+       ├── Tenta recuperar usuário do Redis (Cache hit)
+       ├── Se falhar: Valida token no Supabase (auth.getUser)
+       ├── Atualiza cache no Redis
        └── Injeta user em req.user
 
 3. POST /v1/auth/logout
        ├── Extrai token do header
-       ├── Busca user pelo token
-       └── Seta users.token = null (invalida sessão)
+       ├── SignOut no Supabase
+       └── Remove token do Redis (Invalidação imediata)
 ```
 
 ## Características da Implementação de Auth
 
-- **Token persistido no banco**: O JWT é salvo em `users.token`. Isso permite invalidação via logout (blacklist simples por sobrescrição com null)
-- **Sessão única**: Um usuário só pode ter um token ativo por vez
-- **Verificação dupla**: Além de verificar a assinatura JWT, valida que o token ainda existe no banco
-- **Senha criptografada**: Usa a lib `cripto` local (`decryptText` de `src/utils/helpers.ts`)
-
-## Criptografia de Senha
-
-```typescript
-// Configuração em app.config.ts → env vars necessárias:
-CRIPTO_ALG=...         // algoritmo (ex: aes-256-ctr)
-ENCRYPT_SECRET_KEY=... // chave de criptografia
-ENCRYPT_IV=...         // vetor de inicialização
-```
+- **Supabase Auth**: Gerencia o ciclo de vida da autenticação, senhas e tokens JWT de forma segura.
+- **Cache em Redis**: Para evitar chamadas excessivas ao Supabase, os dados do usuário autenticado são cacheados no Redis com um TTL configurado.
+- **Sincronização Local**: O sistema mantém uma tabela de `users` local para relacionar dados de negócio (clientes, prontuários, etc) ao ID de autenticação.
+- **Middleware Global**: Toda rota protegida passa pelo `AuthMiddleware`, que garante a validade da sessão antes de chegar ao Controller.
 
 ## Acesso ao Usuário Autenticado nos Controllers
 
@@ -75,16 +67,22 @@ Configurado via `.exclude()` no `AppModule.configure()`:
 POST   /v1/auth/login   → login público
 GET    /health          → health check público
 POST   /v1/user         → criação de usuário (onboarding)
+GET    /v1/calendar/confirm-attendance → confirmação de agenda pública
 ```
 
 ## Variáveis de Ambiente de Segurança
 
 ```bash
-# JWT — secret usado para assinar e verificar tokens
-JWT_SECRET=seu-secret-jwt-aqui
+# Provedor de Auth
+AUTH_PROVIDER=supabase
+AUTH_TOKEN_TTL=86400
 
-# Criptografia de senha
-CRIPTO_ALG=aes-256-ctr
-ENCRYPT_SECRET_KEY=sua-chave-aqui
-ENCRYPT_IV=seu-iv-aqui
+# Supabase Config
+SUPABASE_URL=https://sua-url.supabase.co
+SUPABASE_KEY=sua-chave-anon-ou-service-role
+
+# Redis Config (Cache)
+REDIS_HOST=localhost
+REDIS_PORT=6379
 ```
+

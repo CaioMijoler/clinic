@@ -71,6 +71,21 @@ Armazena as consultas e prontuários médicos.
 
 ---
 
+### `medical_record_documents`
+Armazena documentos e anexos vinculados a um prontuário.
+
+| Campo | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id` | `int` | Chave primária. |
+| `medical_record_id` | `int` | ID do prontuário associado (Relacionamento com `medical_record`). |
+| `name` | `varchar(255)` | Nome original do arquivo. |
+| `path` | `text` | Caminho do arquivo no bucket do Supabase. |
+| `content_type` | `varchar(100)` | Tipo MIME do arquivo. |
+| `created_at` | `timestamp` | Data de criação. |
+| `updated_at` | `timestamp` | Data de atualização. |
+
+---
+
 ### `treatment`
 Armazena os tratamentos prescritos.
 

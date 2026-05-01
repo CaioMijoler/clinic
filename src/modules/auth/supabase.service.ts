@@ -33,25 +33,46 @@ export class SupabaseService {
   }
 
   async uploadFile(bucket: string, path: string, file: Buffer, contentType: string) {
+  const cleanBucket = bucket.trim();
+  const cleanPath = path.trim();
+
+  const { data, error } = await this.supabase.storage
+    .from(cleanBucket)
+    .upload(cleanPath, file, {
+      contentType,
+      upsert: true,
+    });
+
+  if (error) {
+    this.logger.error(`Error uploading file to Supabase: ${error.message}`);
+    throw error;
+  }
+
+  const { data: signedUrlData, error: signedUrlError } = await this.supabase.storage
+    .from(cleanBucket)
+    .createSignedUrl(cleanPath, 60 * 60);
+
+  if (signedUrlError) {
+    this.logger.error(`Error creating signed URL: ${signedUrlError.message}`);
+    throw signedUrlError;
+  }
+
+  return {
+    path: data.path,
+    signedUrl: signedUrlData.signedUrl,
+  };
+}
+
+  async getFile(bucket: string, path: string, expiresIn = 60 * 60) {
     const { data, error } = await this.supabase.storage
-      .from(bucket)
-      .upload(path, file, {
-        contentType,
-        upsert: true,
-      });
+      .from(bucket.trim())
+      .createSignedUrl(path.trim(), expiresIn);
 
     if (error) {
-      this.logger.error(`Error uploading file to Supabase: ${error.message}`);
+      this.logger.error(`Error creating signed URL for ${path}: ${error.message}`);
       throw error;
     }
 
-    const { data: publicUrlData } = this.supabase.storage
-      .from(bucket)
-      .getPublicUrl(path);
-
-    return {
-      path: data.path,
-      publicUrl: publicUrlData.publicUrl,
-    };
+    return data.signedUrl;
   }
 }

@@ -13,7 +13,6 @@ import { AuthMiddleware } from './middleware/auth.middleware';
 import { LoggerMiddleware } from './middleware/logger.middleware';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { JwtModule } from '@nestjs/jwt';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { ClientsModule } from './modules/clients/clients.module';
@@ -30,12 +29,6 @@ import { UploadModule } from './modules/upload/upload.module';
   imports: [
     ScheduleModule.forRoot(),
     ConfigModule,
-    JwtModule.register({
-      secret: 'clinical',
-      signOptions: {
-        expiresIn: 86000,
-      },
-    }),
     DatabaseModule,
     HealthModule,
     AuthModule,

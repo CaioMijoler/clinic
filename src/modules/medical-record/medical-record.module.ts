@@ -3,9 +3,10 @@ import { MedicalRecordService } from './medical-record.service';
 import { MedicalRecordController } from './medical-record.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MedicalRecord } from './entities/medical-record.entity';
+import { MedicalRecordDocument } from './entities/medical-record-documents.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([MedicalRecord])],
+  imports: [TypeOrmModule.forFeature([MedicalRecord, MedicalRecordDocument])],
   controllers: [MedicalRecordController],
   providers: [MedicalRecordService],
 })

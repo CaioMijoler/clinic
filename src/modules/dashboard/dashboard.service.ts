@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Between, In, Not, Repository } from 'typeorm';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { MedicalRecord } from '../medical-record/entities/medical-record.entity';
 import { User } from '../user/entities/user.entity';
@@ -46,6 +46,7 @@ export class DashboardService {
         where: {
           userId,
           startDate: Between(startDate, endDate),
+          status: Not(In([MedicalRecordStatusEnum.CANCELED, MedicalRecordStatusEnum.CANCELED_SCHEDULE])),
         },
       }),
 

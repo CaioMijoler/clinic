@@ -1,5 +1,6 @@
 import {
   Controller,
+  Param,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -9,7 +10,7 @@ import { UploadService } from './upload.service';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('upload')
-@Controller('v1/upload')
+@Controller('v1/upload/:medicalRecordId')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
@@ -28,7 +29,7 @@ export class UploadController {
     },
   })
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
-    return this.uploadService.upload(file);
+  async uploadFile(@Param('medicalRecordId') medicalRecordId: string, @UploadedFile() file: Express.Multer.File) {
+    return this.uploadService.upload(Number(medicalRecordId), file);
   }
 }

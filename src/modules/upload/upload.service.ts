@@ -1,17 +1,33 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../auth/supabase.service';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { MedicalRecord } from '../medical-record/entities/medical-record.entity';
+import { Repository } from 'typeorm';
+import { MedicalRecordDocument } from '../medical-record/entities/medical-record-documents.entity';
 
 @Injectable()
 export class UploadService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
+    @InjectRepository(MedicalRecord)
+    private readonly medicalRecordRepository: Repository<MedicalRecord>,
+    @InjectRepository(MedicalRecordDocument)
+    private readonly medicalRecordDocumentRepository: Repository<MedicalRecordDocument>,
   ) {}
 
-  async upload(file: Express.Multer.File) {
+  async upload(medicalRecordId: number, file: Express.Multer.File) {
     if (!file) {
-      throw new BadRequestException('No file provided');
+      throw new BadRequestException('Nenhum arquivo enviado!');
+    }
+    const medicalRecord = await this.medicalRecordRepository.findOne({
+      where: { id: medicalRecordId },
+      relations: ['client'],
+    });
+
+    if (!medicalRecord) {
+      throw new BadRequestException('Prontuário não encontrado!');
     }
 
     const bucket = this.configService.get<string>('supabase.bucket');
@@ -26,9 +42,21 @@ export class UploadService {
         file.mimetype,
       );
 
-      return result;
+      const document = this.medicalRecordDocumentRepository.create({
+        medicalRecordId,
+        name: file.originalname,
+        path: result.path,
+        contentType: file.mimetype,
+      });
+
+      const savedDocument = await this.medicalRecordDocumentRepository.save(document);
+
+      return {
+        ...savedDocument,
+        signedUrl: result.signedUrl,
+      };
     } catch (error) {
-      throw new BadRequestException(`Failed to upload file: ${error.message}`);
+      throw new BadRequestException(`Erro ao fazer upload: ${error.message}`);
     }
   }
 }

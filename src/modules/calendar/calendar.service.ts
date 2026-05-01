@@ -214,15 +214,15 @@ export class CalendarService {
   }
 
   async googleAuth(user: User): Promise<void> {
-    const SCOPES = this.configService.get<string>('calendar.url');
-    this.auth = new google.auth.JWT({
-      email: user.clientEmail,
-      key: user.privateKey,
-      scopes: SCOPES,
-      subject: null,
-    });
+      const SCOPES = this.configService.get<string>('calendar.url');
+      this.auth = new google.auth.JWT({
+        email: user.clientEmail,
+        key: user.privateKey,
+        scopes: SCOPES,
+        subject: null,
+      });
 
-    this.calendar = google.calendar({ version: 'v3', auth: this.auth });
+      this.calendar = google.calendar({ version: 'v3', auth: this.auth });
   }
 
   async createPayloadOrder(
