@@ -60,9 +60,6 @@ export class User {
   @Column({ name: 'supabase_id', type: 'varchar', length: 255, nullable: true })
   supabaseId: string;
 
-  @Column({ type: 'text' })
-  token: string;
-
   @CreateDateColumn({
     name: 'created_at',
   })

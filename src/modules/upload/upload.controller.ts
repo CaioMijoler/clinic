@@ -2,10 +2,10 @@ import {
   Controller,
   Param,
   Post,
-  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 
@@ -21,15 +21,18 @@ export class UploadController {
     schema: {
       type: 'object',
       properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
         },
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@Param('medicalRecordId') medicalRecordId: string, @UploadedFile() file: Express.Multer.File) {
-    return this.uploadService.upload(Number(medicalRecordId), file);
+  @UseInterceptors(FilesInterceptor('files'))
+  async uploadFiles(@Param('medicalRecordId') medicalRecordId: string, @UploadedFiles() files: Array<Express.Multer.File>) {
+    return this.uploadService.upload(Number(medicalRecordId), files);
   }
 }

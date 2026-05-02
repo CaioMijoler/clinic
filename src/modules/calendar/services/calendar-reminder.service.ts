@@ -34,10 +34,10 @@ export class CalendarReminderService {
         where: {
           status: MedicalRecordStatusEnum.SCHEDULED,
           reminderSentAt: IsNull(),
-          startDate: Between(
-            new Date(twelveHoursFromNow.getTime() - marginMs),
-            new Date(twelveHoursFromNow.getTime() + marginMs),
-          ),
+          // startDate: Between(
+          //   new Date(twelveHoursFromNow.getTime() - marginMs),
+          //   new Date(twelveHoursFromNow.getTime() + marginMs),
+          // ),
         },
         relations: ['client', 'user'],
       });
@@ -104,22 +104,27 @@ export class CalendarReminderService {
       // Formata telefone: garante apenas dígitos com DDI
       const phone = appointment.client.telephone.replace(/\D/g, '');
       const phoneWithDDI = phone.length <= 11 ? `55${phone}` : phone;
-     const professionalName = appointment.user?.name ?? 'seu profissional';
-
-      await this.whatsappService.sendTemplateMessage({
-        to: phoneWithDDI,
-        templateName: 'lembrete_agendamento_12h',
-        languageCode: 'pt_BR',
-        bodyParameters: [
-          appointment.client.name,
-          professionalName,
-          appointmentTime,
-          confirmationLink,
-        ],
-        buttonParameters: [
-          { index: 0, text: confirmationLink },
-        ],
-      });
+      const professionalName = appointment.user.name;
+      await this.whatsappService.sendTemplateMessage(
+        {
+          whatsappToken: appointment.user.whatsAppToken,
+          whatsappId: appointment.user.whatsAppId,
+        },
+        {
+          to: phoneWithDDI,//'5516999737133',
+          templateName: 'lembrete_agendamento_12h',
+          languageCode: 'pt_BR',
+          bodyParameters: [
+            appointment.client.name,
+            professionalName,
+            appointmentTime,
+            confirmationLink,
+          ],
+          buttonParameters: [
+            { index: 0, text: confirmationLink },
+          ],
+        },
+      );
 
       await this.medicalRecordRepository.update(appointment.id, {
         reminderSentAt: new Date(),

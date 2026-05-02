@@ -11,7 +11,6 @@ export function makeUser(overrides: Partial<User> = {}): User {
     name: 'Dr. João Silva',
     email: 'joao@clinica.com',
     password: 'hashed_password',
-    token: 'valid_token',
     whatsAppId: null,
     whatsAppToken: null,
     calendarId: null,

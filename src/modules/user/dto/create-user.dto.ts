@@ -70,9 +70,4 @@ export class CreateUserDto {
   @IsString({ message: ErrorMessages['string.base']('Telefone') })
   @FormatPhone()
   telephone: string;
-
-  @ApiProperty()
-  @IsString({ message: ErrorMessages['string.base']('token') })
-  @IsOptional()
-  token: string;
 }

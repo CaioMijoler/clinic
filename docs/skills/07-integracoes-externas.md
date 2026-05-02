@@ -291,8 +291,6 @@ return {
   calendar: { url: process.env.CALENDAR_URL },
   whatsapp: {
     url: process.env.WHATSAPP_URL,
-    id: process.env.WHATSAPP_PHONE_NUMBER_ID,
-    token: process.env.WHATSAPP_ACCESS_TOKEN,
   },
   database: { /* MySQL config */ },
   cripto: { /* criptografia */ },
