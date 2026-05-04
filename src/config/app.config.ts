@@ -11,6 +11,12 @@ export default () => {
     username: process.env.DB_USER,
     logging: logLevel === 'debug',
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    poolSize: 5,
+    extra: {
+      max: 5,
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 5000,
+    },
   };
 
   return {
