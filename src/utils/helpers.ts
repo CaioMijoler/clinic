@@ -21,7 +21,7 @@ const encrypt = async (password: string) => {
   const key = Buffer.from(appConfig().cripto.secret, 'hex');
   const iv = Buffer.from(appConfig().cripto.iv, 'hex');
 
-  const cipher = createCipheriv(algorithm, key, iv);
+  const cipher = createCipheriv(algorithm, new Uint8Array(key), new Uint8Array(iv));
   let encryptedPayload = cipher.update(password, 'utf8', 'hex');
   encryptedPayload += cipher.final('hex');
 
@@ -33,7 +33,7 @@ const decryptText = async (password) => {
   const key = Buffer.from(appConfig().cripto.secret, 'hex');
   const iv = Buffer.from(appConfig().cripto.iv, 'hex');
 
-  const decipher = createDecipheriv(algorithm, key, iv);
+  const decipher = createDecipheriv(algorithm, new Uint8Array(key), new Uint8Array(iv));
   let decryptedPayload = decipher.update(password, 'hex', 'utf8');
   decryptedPayload += decipher.final('utf8');
 
