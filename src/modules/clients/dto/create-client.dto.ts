@@ -7,14 +7,16 @@ import {
   MaxLength,
   Length,
   IsObject,
+  ValidateNested,
 } from 'class-validator';
-import { Transform, TransformFnParams } from 'class-transformer';
+import { Transform, TransformFnParams, Type } from 'class-transformer';
 import { ErrorMessages } from '../../../utils/error-message';
 import { FormatPhone } from '../../../utils/transform';
 
 export class CreateClientOrUpdateAddressDto {
   @ApiProperty({ example: '69084080' })
   @IsString({ message: ErrorMessages['string.base']('CEP') })
+  @Transform(({ value }: TransformFnParams) => value?.replace(/-/g, ''))
   @Length(8, 8, { message: ErrorMessages['length']('CEP', 8, 8) })
   zipCode: string;
 
@@ -30,7 +32,8 @@ export class CreateClientOrUpdateAddressDto {
 
   @ApiProperty({ example: 'Bloco 1 Apto 27' })
   @IsString({ message: ErrorMessages['string.base']('Complemento') })
-  @Length(1, 50, { message: ErrorMessages['length']('Complemento', 1, 50) })
+  @MaxLength(50, { message: ErrorMessages['string.max']('Complemento', 50) })
+  @IsOptional()
   complement: string;
 
   @ApiProperty({ example: 'Pinheiros' })
@@ -40,7 +43,7 @@ export class CreateClientOrUpdateAddressDto {
 
   @ApiProperty({ example: 'Sao Paulo' })
   @IsString({ message: ErrorMessages['string.base']('Cidade') })
-  @Length(1, 50, { message: ErrorMessages['length']('Cidade', 1, 50) })
+  @Length(1, 30, { message: ErrorMessages['length']('Cidade', 1, 30) })
   city: string;
 
   @ApiProperty({ example: 'SP' })
@@ -84,5 +87,7 @@ export class CreateClientDto {
   @ApiProperty({ type: () => CreateClientOrUpdateAddressDto })
   @IsNotEmpty({ message: ErrorMessages['empty']('Endereço') })
   @IsObject({ message: ErrorMessages['object.base']('Endereço') })
+  @Type(() => CreateClientOrUpdateAddressDto)
+  @ValidateNested({ message: ErrorMessages['object.base']('Endereço') })
   clientAddress: CreateClientOrUpdateAddressDto;
 }
