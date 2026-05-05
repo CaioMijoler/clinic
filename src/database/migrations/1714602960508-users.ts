@@ -54,11 +54,6 @@ export class Users1714602960508 implements MigrationInterface {
             length: '255',
           },
           {
-            name: 'calendar_id',
-            type: 'text',
-            isNullable: true,
-          },
-          {
             name: 'whatsapp_token',
             type: 'text',
             isNullable: true,

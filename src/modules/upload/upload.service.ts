@@ -65,4 +65,24 @@ export class UploadService {
 
     return results;
   }
+
+  async getFile(medicalRecordId: number, documentId: number) {
+    const document = await this.medicalRecordDocumentRepository.findOne({
+      where: { id: documentId, medicalRecordId },
+    });
+
+    if (!document) {
+      throw new BadRequestException('Documento não encontrado!');
+    }
+
+    const bucket = this.configService.get<string>('supabase.bucket');
+    const signedUrl = await this.supabaseService.getFile(bucket, document.path);
+
+    return {
+      id: document.id,
+      name: document.name,
+      contentType: document.contentType,
+      signedUrl,
+    };
+  }
 }

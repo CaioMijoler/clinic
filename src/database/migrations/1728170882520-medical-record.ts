@@ -47,11 +47,6 @@ export class MedicalRecord1728170882520 implements MigrationInterface {
             type: 'int',
           },
           {
-            name: 'calendar_google_id',
-            type: 'text',
-            isNullable: true,
-          },
-          {
             name: 'title',
             type: 'varchar',
             length: '255',

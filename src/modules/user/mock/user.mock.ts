@@ -9,9 +9,6 @@ export const createUserDto = (): CreateUserDto => {
     email: 'Complement',
     telephone: '4324234234',
     status: 'active',
-    calendarId: '1',
-    clientEmail: 'clientEmail',
-    privateKey: 'privateKey',
     whatsAppId: '1',
     whatsAppToken: 'dsadas',
   };
@@ -26,9 +23,6 @@ export const createInvalidUserDto = (): CreateUserDto => {
     email: 'Complement',
     telephone: '4324234234',
     status: 'active',
-    calendarId: '1',
-    clientEmail: 'clientEmail',
-    privateKey: 'privateKey',
     whatsAppId: '1',
     whatsAppToken: 'dsadas',
   };

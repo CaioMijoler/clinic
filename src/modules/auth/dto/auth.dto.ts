@@ -53,15 +53,6 @@ export class AuthResponseDto {
   telephone: string;
 
   @ApiProperty({ required: false })
-  clientEmail?: string;
-
-  @ApiProperty({ required: false })
-  privateKey?: string;
-
-  @ApiProperty({ required: false })
-  calendarId?: string;
-
-  @ApiProperty({ required: false })
   whatsAppToken?: string;
 
   @ApiProperty({ required: false })

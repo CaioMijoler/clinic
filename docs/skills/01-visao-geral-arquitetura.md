@@ -12,7 +12,7 @@
 | Validação | `class-validator` + `class-transformer` |
 | HTTP Client | Axios |
 | Logging | NestJS Logger nativo |
-| Integrações | Google Calendar API, WhatsApp Business API |
+| Integrações | WhatsApp Business API |
 | Runtime | Node.js + TypeScript |
 
 ## Estrutura de Pastas Raiz
@@ -74,7 +74,7 @@ DatabaseModule        → conexão TypeORM com MySQL
 HealthModule          → endpoint de health check
 AuthModule            → login/logout/verifyToken
 UserModule            → CRUD de usuários (médicos/assistentes)
-CalendarModule        → integração Google Calendar
+CalendarModule        → agendamento de consultas
 ClientsModule         → cadastro de pacientes
 WhatsappModule        → envio de mensagens WhatsApp
 FeedbackModule        → feedback de tratamento

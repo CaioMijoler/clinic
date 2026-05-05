@@ -1,20 +1,3 @@
-#CREDENTIALS={ "type": "service_account", "project_id": "qgstudio","private_key_id": "fd8987a51f610c40666c4ad917d0819af70eeeda","private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCsacF1SGDE3DqC\n+nTLKECgBrD2si7cDib1TasJ3uTzPdVae+iwdXG2c4Efs9xkkFnrGUXdmzcPkqsx\nuVSN/pDzhiHjbCfViHg1Q3xBxD7yhoiBX1PFOYpAp2m52/zJOexU2I6YxIbx6g7k\nIBZbeVUbQmzAbmZwdAqYkS1wXFrC7JqhX60IdXFB9vVe000ZAVi19EvdZSGYuEKO\nbYvD1F/Zyd7vu9wFfOwMMEQizwKaIWJClJetevDaBessFpyDmPAwPJiTneHEzuq/\nRSVQbxAcCwJa3ECXAMJiOaA2OxjQp/D7bNZ4MUjU3FrWFCibD+r4y2w6PA6hm/d5\nvLTDF7aHAgMBAAECggEAFkFKbwSqNQ8GYHzK0aR+/wkOE7H5WX9cKQLfBpWmcP10\nykq/RPPL+1SagMibNMHrUW0ANzQ/Xbu9bFwzXWbUOBMC0dPWqnoEpj9xTR3zUCPs\nf+KZshYU0faqL4sFbMYUyvjvIyoPDy/6vxijOiiFw1CGMCqv/2kDKyFmP6A0OP/R\nxy2G9JTb839L4u0FCw9Aa5ipP4rmm5yS66OkCR0288gGkzvbQx6cZS/abxicueAK\nHJcObjvu74rzBrhQVOIkD4hoJBF0RyYQAkTJh9mecvfCPn/9iTI/Lqbxt+8sQd3w\ncqFX2L0cVCBbSg5tbetrHhzM3kyalhl5COlB4/QeWQKBgQDyHFNmYuijzd/N08sd\nBW+odNHwuyknxj0y0sbf1k53ZqGFCaZtzaHDuMIY+EImA7faN+KNWWxiTqx/xrGM\nZ+HELldlgHCm6qo8t4bY6Dca3D9G4pKIjkIZc977tTswAh33NCDEObgN20CyhQ5h\nSAKyGt3ivFbdu5aUxWwpFRsXnwKBgQC2TddUL4ETOfrwVroseQ7xXgwDKApASVf8\nrT6caTIUqZltyb7d3rVj6uYAd+IJ+w4YfiOoZGrhasah5Hv0VknDDdmHP7v+qIDp\nwdB97StgCmR81c4ZI4SXUl2Y13YD+xA1Kk4ZeWEnsOnbS5GiVX4JgZYceHLw35qO\npeayGxSYGQKBgQCk47nBL3e1p87WxXm9qCglmHoq86zR0+d2J6seYzxJgXJbwvjA\nK54SSFCY5OtYLIwYaJs5HT/9rAs7cr0VHOLb05veGx2d8JBEjdGfBHgTKRFHW6Pk\nsM4/u3SQBRvsVGTIKY5vVcgOV9a2PnxOsNZ1KmsXsqGOneWuKM7DJAaxjQKBgAYR\nHxphHlWKd2xqJnX2bWXg8FtmiLjM+A2jolLIOW9wmXeK4Dw3/ideGNtpIe+dGEH+\naKdg+CGaURPwK6Pc/0Vrf5K9rz7xUqD030BhlTD0B5YT83Douq/igNTmTrohL8/l\nIYY9gNs2SwIOSMFzQOeGFX3LEGAtwNIAeWXx+sR5AoGBAI8dNIoRU5M634PfvKQa\n237WqqGTKAywJ0SQEFrTF3+1DtXDM5uPD529ayG3Shj4vA0DrWKItWA/QmqvDhOa\n3zRPvQfoGGMyqIeYLb6suSqhBxEsPagn/zXsUHqKorHdADLv24JyIU3df9kB4h+S\nA+FGmwacJgip1638GbHIP+Cl\n-----END PRIVATE KEY-----\n","client_email": "qgstudio-app@qgstudio.iam.gserviceaccount.com","client_id": "101083492212574332437","auth_uri": "https://accounts.google.com/o/oauth2/auth","token_uri": "https://oauth2.googleapis.com/token","auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/qgstudio-app%40qgstudio.iam.gserviceaccount.com","universe_domain": "googleapis.com"}
-CREDENTIALS={
-  "type": "service_account",
-  "project_id": "projeto-paulo-miracle",
-  "private_key_id": "a7450ce7c15f910e100becb9c651088b0dfa22b0",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDM8pmmzbSXj4R+\n8CZ6jwTFdRwrRQ6NDEECBnHguL0vyr9YWwF977nC/4O9GvUXVJo6+kmM0twJ06IQ\n00USz8TR1/0nEGBGkyBLs6nuncBj0TSQJ/mTuQGW1Heczb+/tyTS+QRU8AcRJ59O\nFYQy9TDW/2JaBrd2eqoxz1mZn4P0wJtqprhdCB0UOD8CjNHRLv/Z6e04vfJtDiNr\nEZ9CtjTQ1uGevq4zqh0L4yrtJEaiKFQYRP/+NcXhJ89x6U97rjidX85umhBPLaBN\naRjxzNNuAnb9KbND5QtIUtClGtwfAlCKhkJrPpGwyVfdrUCZotmIz3GCyGVbK6cH\n621hVFs5AgMBAAECggEAA1CZM514Iktr9TGlLa5KgXcXcYu4ZIeiNYotJVlXlgJN\nffxa1dKeyoyfcNuSw0HXDMUnk2OFs5L8uBDyuQ8rO8mmio81P275wr+xK+7ZQcQM\neZhr7Pu9Dtd458xcIZmwusjUTRtkwd5GMVkfvkNA+vk+ef5J0VzCi/Oym019MOQ1\nMin1f8cGN/wqD0u4ovUslp0l8dJJsZKHDiGOvXmoO4WfA21aZb4kWGsoF9J4x70m\n16lSe4GNaq8yAgeuDBpG21kZIHMtsMqvLzcumn6u7k7HrWg0bCFy1ReQAaqfqtUs\nemOrFjpwiLG3OTcydoKYv7jIwvQOPeovIrwYgtcOUQKBgQD0+IGSWzxOKSwTy2GW\nu0cqP5DM82j+g3hPjy7kZnaFKxAbc4kRYWOP/235+P6Rl6tk5+R4DfaheEC97i6e\nlLWhgCmF/hcnGJzjFp7f7Nwz7gB8lyKmzblPqFLgNZSgnWhruGBaUw4K5Gw9KBTW\nkzB7aB+r6iuyfYEpmvKkLFehbwKBgQDWLMtjagB1UN88vA1MyxVZCQXpdJyOgyHA\nYQ0GceOABuYKgRkoJjDLOQQKjw9XxHd7EWySXWaG43ELbCMBIsmBeAfMaazmUn1s\nkvVBTwOZduZzG6vMn0IzxCF8NtvjPr3NvdNv2QdJLlsxL7KTJwk//nt4GYlEPIS+M\nqQ1BQK8p1wKBgH5L0KGgIAs79tmNtZZ8n0gM1Z6Ur8DoDxMVgtuGZ/xoIznD6xrm\n1unaityhnr15MIgpdgTfThQZZ2eEcMyZZrsI1F+cjFs/uULq2qYf+7daMS4KzXaq\nAawr3+5wMVxNSxSeTi7DOy4qbhNporSt1gUJvapoZHb1da35kLdLlTJJAoGACakD\nk3xYgPIg35Br2Sbf06BAkAMefJ8ViqPV/pBsfn3RKnAgPltaoA/2SrOhMYg/C2IB\nz6g+0562nplGCusSw7AySdoKXmkiFx+ZyFRUCTv/sPlyikw0pDkYeY3P5TQTQ5Bo\nVQco+PgKTPGl0FVWaXQ093y/wzrv9hw56NOOEwkCgYBjHwVXv/RwHk44SGJj2au/\nWVYf9GhXwxGcrqM36XxckSVbC+GzCpDlkwhE4jIRhWLDZHjAmm9jRSz3vznTN+If\nG4WM/2RXftawi2H9OHULxzyFgaphs6dLswEyqfWJxfn7HHPKTwjlghh5P9hpnaM2\nIuqXqthyG3rExrYoiElyRw==\n-----END PRIVATE KEY-----\n",
-  "client_email": "miracle@projeto-paulo-miracle.iam.gserviceaccount.com",
-  "client_id": "116397433480628019826",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/miracle%40projeto-paulo-miracle.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
-# CALENDAR_ID=89648864b8cad69819610bc11b6abd79f29a090ebbb5103b7b9e37f02bb6da67@group.calendar.google.com
-CALENDAR_ID="gabrielsmijoler@gmail.com"
-CALENDAR_URL="https://www.googleapis.com/auth/calendar"
 WHATSAPP_URL="https://graph.facebook.com/v20.0"
 WHATSAPP_PHONE_NUMBER_ID=
 WHATSAPP_ACCESS_TOKEN=
@@ -26,7 +9,6 @@ DB_USER=gabriel
 DB_PASSWORD=Gsm302554
 DB_SSL=true
 PORT=3001
-JWT_SECRET=seu-secret-jwt-aqui
 
 AUTH_TOKEN_TTL=86400
 REDIS_HOST=localhost

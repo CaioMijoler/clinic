@@ -1,11 +1,14 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 class MedicalRecordResumeDto {
   @ApiProperty()
   id: number;
 
   @ApiProperty()
-  status: string;
+  title: string;
+
+  @ApiPropertyOptional()
+  symptoms?: string;
 }
 
 export class ResponseMedicalRecordResumeDto {
@@ -13,26 +16,23 @@ export class ResponseMedicalRecordResumeDto {
   id: string;
 
   @ApiProperty()
-  title: string;
+  summary: string;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional()
   description?: string;
 
   @ApiProperty()
-  start: { dateTime: string; timeZone: string };
+  start: { dateTime?: string; date?: string };
 
   @ApiProperty()
-  end: { dateTime: string; timeZone: string };
+  end: { dateTime?: string; date?: string };
 
-  @ApiProperty()
-  status: string;
+  @ApiPropertyOptional()
+  clientId?: string;
 
-  @ApiProperty()
-  summary: string;
+  @ApiPropertyOptional()
+  clientName?: string;
 
-  @ApiProperty({ required: false })
-  link?: string;
-
-  @ApiProperty({ type: MedicalRecordResumeDto, nullable: true })
-  medicalRecord: MedicalRecordResumeDto | null;
+  @ApiPropertyOptional({ type: MedicalRecordResumeDto })
+  medicalRecord?: MedicalRecordResumeDto;
 }

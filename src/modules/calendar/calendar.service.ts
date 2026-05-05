@@ -6,13 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateCalendarDto } from './dto/create-calendar.dto';
-import { google } from 'googleapis';
-import { ConfigService } from '@nestjs/config';
 import { FilterCalendarDto } from './dto/filter-calendar.dto';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, Repository, Between, FindManyOptions } from 'typeorm';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { User } from '../user/entities/user.entity';
-import { CreateOrderDto } from './dto/create-order.dto';
 import { MedicalRecord } from '../medical-record/entities/medical-record.entity';
 import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
 import { Client } from '../clients/entities/client.entity';
@@ -21,34 +18,23 @@ import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-re
 
 @Injectable()
 export class CalendarService {
-  private calendar;
-  private auth;
-
   constructor(
     @InjectDataSource() private dataSource: DataSource,
     @InjectRepository(MedicalRecord)
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
-    private readonly configService: ConfigService,
   ) {}
 
   async create(createCalendarDto: CreateCalendarDto, user: User) {
     try {
-      const { ...calendarData } = createCalendarDto;
       const dataSourceResponse = await this.dataSource.transaction(
         async (manager) => {
           let medicalRecord = null;
+
           const userAuth = await manager.findOne(User, {
             where: { id: user.id },
-            select: [
-              'id',
-              'name',
-              'whatsAppId',
-              'whatsAppToken',
-              'clientEmail',
-              'privateKey',
-              'calendarId',
-            ],
+            select: ['id', 'name', 'whatsAppId', 'whatsAppToken'],
           });
+
           if (!userAuth) {
             throw new NotFoundException(
               'Não conseguimos encontrar o solicitante.',
@@ -76,37 +62,24 @@ export class CalendarService {
               );
             }
           }
-          await this.googleAuth(userAuth);
 
-          return {
-            medicalRecord,
-            calendar: createCalendarDto,
-            user: userAuth,
-            client,
-          };
+          return { medicalRecord, user: userAuth, client };
         },
       );
 
-      const response = await this.calendar.events.insert({
-        calendarId: dataSourceResponse.user.calendarId,
-        resource: calendarData,
-      });
+      const title = `${createCalendarDto.summary}`.trim();
 
-      const payloadMedicalOrder = await this.createPayloadOrder(
-        dataSourceResponse.calendar,
-      );
-      await this.medicalRecordRepository.save({
+      const saved = await this.medicalRecordRepository.save({
         ...dataSourceResponse.medicalRecord,
-        title: payloadMedicalOrder.title,
-        startDate: payloadMedicalOrder.startDate,
-        endDate: payloadMedicalOrder.endDate,
-        calendarGoogleId: response['data']['id'],
+        title,
+        startDate: createCalendarDto.start.dateTime,
+        endDate: createCalendarDto.end.dateTime,
         status: MedicalRecordStatusEnum.SCHEDULED,
         clientId: dataSourceResponse.client.id,
         userId: dataSourceResponse.user.id,
       });
 
-      return response['data'];
+      return saved;
     } catch (error: Error | any) {
       const message = `Ocorreu um erro ao criar o evento. Mais Detalhes: ${JSON.stringify(error?.errors) ?? error?.response?.message}`;
       if (error instanceof HttpException) throw error;
@@ -122,38 +95,31 @@ export class CalendarService {
     try {
       const userAuth = await this.dataSource.manager.findOne(User, {
         where: { id: user.id },
-        select: ['id', 'name', 'clientEmail', 'privateKey', 'calendarId'],
+        select: ['id', 'name'],
       });
 
       if (!userAuth) {
         throw new NotFoundException('Não conseguimos encontrar o solicitante.');
       }
 
-      await this.googleAuth(userAuth);
-      const response = await this.calendar.events.list({
-        auth: this.auth,
-        calendarId: userAuth.calendarId,
-        timeMin: queryParams.start,
-        timeMax: queryParams.end,
-        timeZone: 'America/Sao_Paulo',
+      const where: FindManyOptions<MedicalRecord>['where'] = {
+        userId: userAuth.id,
+      };
+
+      if (queryParams.start && queryParams.end) {
+        where.startDate = Between(
+          new Date(queryParams.start),
+          new Date(queryParams.end),
+        );
+      }
+
+      const medicalRecords = await this.medicalRecordRepository.find({
+        where,
+        relations: ['client'],
+        order: { startDate: 'ASC' },
       });
-      const items = response['data']['items'] || [];
 
-      const records = await this.medicalRecordRepository.find({
-        where: {
-          calendarGoogleId: In(items.map((item) => item.id)),
-        },
-      });
-
-      const recordsMap = new Map(
-        records.map((record) => [record.calendarGoogleId, record]),
-      );
-
-      const enrichedItems = items.map((item) =>
-        this.mapToEventDto(item, recordsMap.get(item.id)),
-      );
-
-      return enrichedItems;
+      return medicalRecords.map((record) => this.mapToEventDto(record));
     } catch (error) {
       const message = 'Ocorreu um erro ao buscar os eventos.';
       if (error instanceof HttpException) throw error;
@@ -162,11 +128,11 @@ export class CalendarService {
     }
   }
 
-  async remove(eventId: string, user: User) {
+  async remove(medicalRecordId: string, user: User) {
     try {
       const userAuth = await this.dataSource.manager.findOne(User, {
         where: { id: user.id },
-        select: ['id', 'name', 'clientEmail', 'privateKey', , 'calendarId'],
+        select: ['id'],
       });
 
       if (!userAuth) {
@@ -174,7 +140,7 @@ export class CalendarService {
       }
 
       const medicalRecord = await this.medicalRecordRepository.findOne({
-        where: { calendarGoogleId: eventId },
+        where: { id: Number(medicalRecordId), userId: userAuth.id },
       });
 
       if (!medicalRecord) {
@@ -183,58 +149,17 @@ export class CalendarService {
         );
       }
 
-      await this.googleAuth(userAuth);
-
-      const response = await this.calendar.events.delete({
-        auth: this.auth,
-        calendarId: userAuth.calendarId,
-        eventId: eventId,
-      });
-
       await this.medicalRecordRepository.update(medicalRecord.id, {
         status: MedicalRecordStatusEnum.CANCELED,
       });
 
-      if (response.data === '') {
-        return 1;
-      } else {
-        return 0;
-      }
+      return { success: true, id: medicalRecord.id };
     } catch (error) {
-      const message = 'Ocorreu um erro ao deletar o evento.';
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
+      const message = 'Ocorreu um erro ao cancelar o evento.';
+      if (error instanceof HttpException) throw error;
       Logger.error(message, (error as any)?.stack ?? (error as any)?.message);
-
       throw new BadRequestException(message);
     }
-  }
-
-  async googleAuth(user: User): Promise<void> {
-      const SCOPES = this.configService.get<string>('calendar.url');
-      this.auth = new google.auth.JWT({
-        email: user.clientEmail,
-        key: user.privateKey,
-        scopes: SCOPES,
-        subject: null,
-      });
-
-      this.calendar = google.calendar({ version: 'v3', auth: this.auth });
-  }
-
-  async createPayloadOrder(
-    calendarDto: CreateCalendarDto,
-  ): Promise<CreateOrderDto> {
-    return {
-      medicalRecordId: calendarDto.medicalRecordId,
-      calendarGoogleId: null,
-      startDate: calendarDto.start.dateTime,
-      endDate: calendarDto.start.dateTime,
-      title: `${calendarDto.summary} ${calendarDto.description}`,
-    };
   }
 
   async confirmAttendance(
@@ -319,25 +244,24 @@ export class CalendarService {
     }
   }
 
-  private mapToEventDto(
-    item: any,
-    medicalRecord?: MedicalRecord,
-  ): ResponseMedicalRecordResumeDto {
+  private mapToEventDto(record: MedicalRecord): ResponseMedicalRecordResumeDto {
     return {
-      id: item.id,
-      title: item.summary,
-      description: item.description,
-      start: { dateTime: item.start?.dateTime, timeZone: item.start?.timeZone },
-      end: { dateTime: item.end?.dateTime, timeZone: item.end?.timeZone },
-      status: item.status,
-      link: item.htmlLink,
-      summary: item.summary,
-      medicalRecord: medicalRecord
-        ? {
-            id: medicalRecord.id,
-            status: medicalRecord.status,
-          }
-        : null,
+      id: String(record.id),
+      summary: record.title || 'Agendamento',
+      description: record.title || 'Nenhuma descrição encontrada',
+      start: {
+        dateTime: record.startDate?.toISOString(),
+      },
+      end: {
+        dateTime: record.endDate?.toISOString(),
+      },
+      clientId: record.clientId ? String(record.clientId) : '',
+      clientName: record.client?.name || '',
+      medicalRecord: {
+        id: record.id,
+        title: record.title || 'Agendamento',
+        symptoms: record.symptoms || '',
+      },
     };
   }
 }

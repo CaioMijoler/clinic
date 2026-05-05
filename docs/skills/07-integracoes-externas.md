@@ -1,95 +1,4 @@
-# SKILL: Integrações Externas — Google Calendar e WhatsApp
-
-## Google Calendar
-
-### Configuração
-
-```bash
-# Env vars necessárias:
-CALENDAR_URL=https://www.googleapis.com/auth/calendar  # scope OAuth
-```
-
-O usuário precisa ter configurado no banco  client_email, private_key ambos do tipo texto de **Service Account** do Google:
-```json
-{
-  "client_email": "service-account@projeto.iam.gserviceaccount.com",
-  "private_key": "-----BEGIN RSA PRIVATE KEY-----\n..."
-}
-```
-
-E `users.calendarId` com o ID do calendário Google vinculado ao médico.
-
-### Autenticação Google (JWT Service Account)
-
-```typescript
-// CalendarService.googleAuth(user)
-const auth = new google.auth.JWT(
-  user.client_email,
-  null,
-  user.private_key,
-  SCOPES, // = CALENDAR_URL env
-);
-this.calendar = google.calendar({ version: 'v3', auth });
-```
-
-### Fluxo de Agendamento (CalendarService)
-
-```
-POST /v1/calendar
-  1. Valida usuário autenticado (busca clientEmail, privateKey e calendarId)
-  2. Valida que o Client existe (via clientId)
-  3. Valida MedicalRecord se medicalRecordId informado (opcional)
-  4. Autentica no Google Calendar via Service Account
-  5. Insere evento: calendar.events.insert({ calendarId, resource: calendarDto })
-  6. Salva/atualiza MedicalRecord:
-     - calendarGoogleId = id do evento Google
-     - title, startDate, endDate
-     - status = SCHEDULED (default)
-  7. Retorna dados do evento criado
-```
-
-### Criação de Evento (CreateCalendarDto esperado)
-
-```typescript
-// O DTO segue o formato da Google Calendar API + campos extras:
-{
-  medicalRecordId?: number;              // Opcional — ID do prontuário em andamento
-  clientId: number;                      // Obrigatório — ID do paciente
-  summary: string;                       // título do evento
-  description: string;                   // descrição/observação
-  start: {
-    dateTime: string;                    // ISO 8601: "2024-10-01T10:00:00-03:00"
-    timeZone: string;                    // "America/Sao_Paulo"
-  };
-  end: {
-    dateTime: string;
-    timeZone: string;
-  };
-}
-```
-
-### Listagem de Eventos (GET /v1/calendar)
-
-```typescript
-// FilterCalendarDto:
-{
-  start: string;  // timeMin (ISO 8601)
-  end: string;    // timeMax (ISO 8601)
-}
-// Retorna array de eventos do Google Calendar
-```
-
-### Cancelamento (DELETE /v1/calendar/:eventId)
-
-```
-eventId = calendarGoogleId (ID do evento no Google)
-  1. Valida usuário
-  2. Busca MedicalRecord por calendarGoogleId
-  3. calendar.events.delete(eventId)
-  4. Atualiza MedicalRecord.status = CANCELED_SCHEDULE
-```
-
----
+# SKILL: Integrações Externas — WhatsApp
 
 ## WhatsApp Business API
 
@@ -168,7 +77,7 @@ Envio automático de mensagem via WhatsApp Business API para lembrar o paciente 
 AppModule
  └── ScheduleModule.forRoot()    ← habilita @Cron
  └── CalendarModule
-      ├── CalendarService          ← CRUD de eventos + confirmação
+      ├── CalendarService          ← CRUD de agendamentos + confirmação
       ├── CalendarReminderService  ← Cron de lembretes
       └── imports: [WhatsappModule]  ← acesso ao WhatsappService
 ```
@@ -288,7 +197,6 @@ Mensagens pré-definidas para fallback (envio de texto simples):
 return {
   env: process.env.ENV ?? 'dev',
   port: process.env.PORT ?? 3000,
-  calendar: { url: process.env.CALENDAR_URL },
   whatsapp: {
     url: process.env.WHATSAPP_URL,
   },

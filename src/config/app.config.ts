@@ -24,9 +24,6 @@ export default () => {
     logLevel,
     port: process.env.PORT ?? 3000,
     logInjection: process.env.LOG_INJECTION ?? true,
-    calendar: {
-      url: process.env.CALENDAR_URL
-    },
     whatsapp: {
       url: process.env.WHATSAPP_URL,
     },
@@ -36,7 +33,6 @@ export default () => {
     auth: {
       provider: process.env.AUTH_PROVIDER ?? 'local',
       tokenTtl: process.env.AUTH_TOKEN_TTL || 86400,
-      jwtSecret: process.env.JWT_SECRET ?? 'clinical',
     },
     supabase: {
       url: process.env.SUPABASE_URL,

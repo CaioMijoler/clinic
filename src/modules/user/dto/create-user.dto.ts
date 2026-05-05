@@ -41,21 +41,6 @@ export class CreateUserDto {
   status: string;
 
   @ApiProperty()
-  @IsString({ message: ErrorMessages['string.base']('Email Cliente google agenda') })
-  @IsOptional()
-  clientEmail: string;
-
-  @ApiProperty()
-  @IsString({ message: ErrorMessages['string.base']('Private key google agenda') })
-  @IsOptional()
-  privateKey: string;
-
-  @ApiProperty()
-  @IsString({ message: ErrorMessages['string.base']('Agenda Google Id') })
-  @IsOptional()
-  calendarId: string;
-
-  @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('WhatsApp Token') })
   @IsOptional()
   whatsAppToken: string;

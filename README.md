@@ -63,18 +63,12 @@ PORT=3000
 ENV=dev
 LOG_LEVEL=debug
 
-# JWT — secret para assinar e verificar tokens
-JWT_SECRET=seu-secret-jwt-aqui
-
 # Banco de dados MySQL
 DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=clinic
 DB_USER=root
 DB_PASSWORD=sua-senha
-
-# Google Calendar (Service Account)
-CALENDAR_URL=https://www.googleapis.com/auth/calendar
 
 # WhatsApp Business API
 WHATSAPP_URL=https://graph.facebook.com/v17.0
@@ -136,7 +130,7 @@ src/
     ├── user/               # Cadastro de usuários (médicos/assistentes)
     ├── clients/            # Cadastro de pacientes
     ├── medical-record/     # Prontuário (módulo central)
-    ├── calendar/           # Agendamento via Google Calendar
+    ├── calendar/           # Agendamento
     ├── pathologies/        # Cadastro de patologias (CID)
     ├── questions/          # Guia de perguntas de psicanálise
     ├── treatment/          # Passos do tratamento

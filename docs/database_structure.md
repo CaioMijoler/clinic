@@ -17,9 +17,6 @@ Armazena os profissionais de saúde e usuários do sistema.
 | `password` | `varchar(255)` | Senha (hash). |
 | `whatsAppId` | `varchar(255)` | ID da conta WhatsApp. |
 | `whatsAppToken` | `text` | Token de acesso WhatsApp. |
-| `clientEmail` | `varchar(255)` | Email do cliente Google. |
-| `privateKey` | `text` | Chave privada Google Calendar. |
-| `calendarId` | `varchar(255)` | ID da agenda Google. |
 | `created_at` | `timestamp` | Data de criação. |
 | `updated_at` | `timestamp` | Data de atualização. |
 
@@ -52,7 +49,6 @@ Armazena as consultas e prontuários médicos.
 | Campo | Tipo | Descrição |
 | :--- | :--- | :--- |
 | `id` | `int` | Chave primária. |
-| `calendar_google_id` | `text` | ID do evento no Google Calendar. |
 | `title` | `varchar(255)` | Título da consulta. |
 | `start_date` | `timestamp` | Data/hora de início. |
 | `end_date` | `timestamp` | Data/hora de fim. |

@@ -328,9 +328,6 @@ export class MedicalRecordService {
         'name',
         'whatsAppId',
         'whatsAppToken',
-        'clientEmail',
-        'privateKey',
-        'calendarId',
       ],
     });
 

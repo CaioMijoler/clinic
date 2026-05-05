@@ -53,9 +53,6 @@ export class UserService {
       user.telephone = createUserDto?.telephone;
       user.type = createUserDto?.type;
       user.status = createUserDto?.status;
-      user.calendarId = createUserDto?.calendarId;
-      user.clientEmail = createUserDto?.clientEmail;
-      user.privateKey = createUserDto?.privateKey;
       user.whatsAppId = createUserDto?.whatsAppId;
       user.whatsAppToken = createUserDto?.whatsAppToken;
       user.supabaseId = supabaseId;
@@ -144,12 +141,6 @@ export class UserService {
           updateUserDto?.telephone || userToUpdate.telephone;
         userToUpdate.type = updateUserDto?.type || userToUpdate.type;
         userToUpdate.status = updateUserDto?.status || userToUpdate.status;
-        userToUpdate.calendarId =
-          updateUserDto?.calendarId || userToUpdate.calendarId;
-        userToUpdate.clientEmail =
-          updateUserDto?.clientEmail || userToUpdate.clientEmail;
-        userToUpdate.privateKey =
-          updateUserDto?.privateKey || userToUpdate.privateKey;
         userToUpdate.whatsAppId =
           updateUserDto?.whatsAppId || userToUpdate.whatsAppId;
         userToUpdate.whatsAppToken =

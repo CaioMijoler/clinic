@@ -25,9 +25,6 @@ export class MedicalRecord {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'calendar_google_id', type: 'text', nullable: true })
-  calendarGoogleId: string;
-
   @Column({
     type: 'varchar',
     length: 255,

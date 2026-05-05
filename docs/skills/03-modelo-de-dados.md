@@ -27,9 +27,6 @@ Client
 | token | varchar | JWT token atual (invalidado no logout) |
 | whatsAppId | varchar | ID do dispositivo WhatsApp vinculado |
 | whatsAppToken | varchar | Token de acesso WhatsApp |
-| clientEmail | text | Email da Google Service Account para Calendar |
-| privateKey | text | Chave privada da Google Service Account para Calendar |
-| calendarId | varchar | ID do calendário Google associado ao usuário |
 | created_at | timestamp | |
 | updated_at | timestamp | |
 
@@ -66,7 +63,6 @@ Client
 | Coluna | Tipo | Descrição |
 |---|---|---|
 | id | int PK | |
-| calendar_google_id | text | ID do evento no Google Calendar |
 | title | varchar(255) | Título do agendamento |
 | start_date | timestamp | Data/hora início consulta |
 | end_date | timestamp | Data/hora fim consulta |
@@ -159,7 +155,7 @@ Relação: `ManyToOne` → MedicalRecord
 // src/utils/enum/medical-record.enum.ts
 enum MedicalRecordStatusEnum {
   CREATED = 'created', // Prontuário criado, sem agendamento
-  SCHEDULED = 'scheduled', // Agendamento criado no Google Calendar
+  SCHEDULED = 'scheduled', // Agendamento criado
   CANCELED = 'canceled', // Prontuário cancelado/removido
   CANCELED_SCHEDULE = 'canceled_schedule', // Agendamento cancelado no Calendar
   CONFIRMED_SCHEDULE = 'confirmed_schedule', // Paciente confirmou presença

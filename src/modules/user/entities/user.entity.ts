@@ -42,15 +42,6 @@ export class User {
   @Column({ type: 'varchar', length: 90, nullable: true })
   telephone: string;
 
-  @Column({ name: 'client_email', type: 'text', nullable: true })
-  clientEmail: string;
-
-  @Column({ name: 'private_key', type: 'text', nullable: true })
-  privateKey: string;
-
-  @Column({ name: 'calendar_id', type: 'text' })
-  calendarId: string;
-
   @Column({ name: 'whatsapp_token', type: 'text' })
   whatsAppToken: string;
 

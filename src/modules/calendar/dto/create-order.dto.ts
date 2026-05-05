@@ -8,19 +8,17 @@ export class CreateOrderDto {
   medicalRecordId: number;
 
   @ApiProperty()
-  @IsString({ message: ErrorMessages['string.base']('Id do google calendar') })
-  @IsOptional()
-  calendarGoogleId: string;
-
-  @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('Data de Inicio') })
+  @IsOptional()
   startDate?: string;
 
   @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('Data de Término]') })
+  @IsOptional()
   endDate?: string;
 
   @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('Data de agendamento') })
+  @IsOptional()
   title?: string;
 }

@@ -19,10 +19,6 @@ import { CreateMedicalRecordPathologyDto } from './medical-record-pathologies/cr
 import { CreateMedicalRecordQuestionsDto } from './medical-record-questions/create-medical-record-questions.dto';
 
 export class CreateMedicalRecordDto {
-  @ApiProperty({ required: false, example: '' })
-  @IsOptional()
-  calendarGoogleId?: string;
-
   @ApiProperty()
   @IsString({ message: ErrorMessages['string.base']('Sintomas') })
   @Length(1, 500, {
@@ -107,9 +103,6 @@ export class CreateMedicalRecordDto {
 export class MedicalRecordResponseDto {
   @ApiProperty()
   id: number;
-
-  @ApiProperty()
-  calendarGoogleId?: string;
 
   @ApiProperty()
   symptoms: string;

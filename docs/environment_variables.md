@@ -25,7 +25,6 @@ Este documento descreve as variáveis de ambiente necessárias para o funcioname
 |---|---|---|
 | `AUTH_PROVIDER` | Provedor de auth (`local` ou `supabase`) | `local` |
 | `AUTH_TOKEN_TTL` | Tempo de vida da sessão no Redis (segundos) | `86400` (24h) |
-| `JWT_SECRET` | Segredo para assinatura de tokens locais | `clinical` |
 
 ## Supabase
 Necessário se `AUTH_PROVIDER=supabase` ou para upload de arquivos.
@@ -44,7 +43,6 @@ Necessário se `AUTH_PROVIDER=supabase` ou para upload de arquivos.
 ## Integrações Externas
 | Variável | Descrição |
 |---|---|
-| `CALENDAR_URL` | URL da API do Google Calendar |
 | `WHATSAPP_URL` | URL da API do WhatsApp Business |
 | `WHATSAPP_PHONE_NUMBER_ID` | ID do número de telefone |
 | `WHATSAPP_ACCESS_TOKEN` | Token de acesso do WhatsApp |
