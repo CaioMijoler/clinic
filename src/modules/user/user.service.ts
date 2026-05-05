@@ -93,6 +93,17 @@ export class UserService {
     return user;
   }
 
+  async findBySupabaseId(supabaseId: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { supabaseId } });
+    if (!user) {
+      throw new BadRequestException('Usuário não encontrado.');
+    }
+    if (user.password) {
+      user.password = await decryptText(user.password);
+    }
+    return user;
+  }
+
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
     const userToUpdate = await this.userRepository.findOne({
       where: { id },
@@ -113,6 +124,7 @@ export class UserService {
             {
               email: updateUserDto.email,
               password: updateUserDto.password,
+              role: updateUserDto?.type,
             },
           );
 
@@ -121,7 +133,6 @@ export class UserService {
           }
         }
 
-        // 2. Update local data
         userToUpdate.name = updateUserDto?.name || userToUpdate.name;
         if (updateUserDto.password) {
           userToUpdate.password = await encrypt(updateUserDto.password);

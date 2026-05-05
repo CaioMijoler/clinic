@@ -37,6 +37,12 @@ export class UserController {
     return this.userService.findOne(id);
   }
 
+  @Get('supabase/:id')
+  @ApiBearerAuth()
+  findBySupabaseId(@Param('id') id: string): Promise<User> {
+    return this.userService.findBySupabaseId(id);
+  }
+
   @Put(':id')
   @ApiBearerAuth()
   update(

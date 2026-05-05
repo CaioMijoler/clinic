@@ -57,7 +57,7 @@ export class AuthService {
         emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
         roles: [userData.type],
         accessToken: accessToken,
-        type: userData.type as 'admin' | 'user',
+        type: userData.type as 'admin' | 'client',
         status: userData.status as 'active' | 'inactive',
         telephone: userData.telephone,
         clientEmail: userData.clientEmail,
@@ -83,10 +83,8 @@ export class AuthService {
     try {
       const token = this.extractTokenFromHeader(accessToken);
 
-      // 1. Sign out from Supabase (optional, usually handled by frontend, but good for security)
       await this.supabaseService.getClient().auth.signOut();
 
-      // 2. Remove from Redis
       const key = `auth_token:${token}`;
       await this.redisService.del(key);
 
@@ -138,7 +136,7 @@ export class AuthService {
         emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
         roles: [userData.type],
         accessToken: token,
-        type: userData.type as 'admin' | 'user',
+        type: userData.type as 'admin' | 'client',
         status: userData.status as 'active' | 'inactive',
         telephone: userData.telephone,
         clientEmail: userData.clientEmail,

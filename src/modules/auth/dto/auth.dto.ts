@@ -43,8 +43,8 @@ export class AuthResponseDto {
   @ApiProperty({ required: false })
   accessToken?: string;
 
-  @ApiProperty({ enum: ['admin', 'user'] })
-  type: 'admin' | 'user';
+  @ApiProperty({ enum: ['admin', 'client'] })
+  type: 'admin' | 'client';
 
   @ApiProperty({ enum: ['active', 'inactive'] })
   status: 'active' | 'inactive';
