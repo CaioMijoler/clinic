@@ -30,9 +30,9 @@ export class CalendarController {
   @Get('cron/reminders')
   async triggerReminders(@Req() req: Request) {
     const authHeader = req.headers['authorization'];
-    // if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    //   throw new BadRequestException('Unauthorized cron trigger');
-    // }
+    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      throw new BadRequestException('Unauthorized cron trigger');
+    }
 
     await this.calendarReminderService.sendReminderMessages();
     return { success: true, message: 'Reminders triggered successfully' };

@@ -11,7 +11,7 @@ import { UploadService } from './upload.service';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('upload')
-@Controller('v1/upload/:medicalRecordId')
+@Controller(':medicalRecordId')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
@@ -37,7 +37,7 @@ export class UploadController {
     return this.uploadService.upload(Number(medicalRecordId), files);
   }
 
-  @Get('file/:documentId')
+  @Get('file/:medicalRecordId/:documentId')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Gera uma signed URL para acessar um documento do prontuário' })
   async getFile(

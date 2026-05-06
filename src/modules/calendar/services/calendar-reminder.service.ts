@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, IsNull, Repository } from 'typeorm';
 import { MedicalRecordStatusEnum } from '../../../utils/enum/medical-record.enum';
@@ -22,7 +22,7 @@ export class CalendarReminderService {
    * Busca consultas com startDate entre 12h ± 5min a partir de agora,
    * com status SCHEDULED e sem lembrete enviado (reminderSentAt = null).
    */
-  @Cron('0 0 * * *')
+  @Cron(CronExpression.EVERY_10_SECONDS)
   async sendReminderMessages() {
     try {
       const now = new Date();
@@ -105,9 +105,10 @@ export class CalendarReminderService {
       const phone = appointment.client.telephone.replace(/\D/g, '');
       const phoneWithDDI = phone.length <= 11 ? `55${phone}` : phone;
       const professionalName = appointment.user.name;
+
       await this.whatsappService.sendTemplateMessage(
         {
-          whatsappToken: appointment.user.whatsAppToken,
+           whatsappToken: appointment.user.whatsAppToken,
           whatsappId: appointment.user.whatsAppId,
         },
         {

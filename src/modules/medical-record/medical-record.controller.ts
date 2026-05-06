@@ -19,6 +19,7 @@ import { UpdateMedicalRecordDto } from './dto/update-medical-record.dto';
 import { Request } from 'express';
 import { IPaginate } from '../../utils/paginate';
 import { FilterDto } from '../../utils/filter-dto';
+import { MedicalRecordDocumentResponseDto } from './dto/medical-record-documents/medical-record-documents-response.dto';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('medical-record')
@@ -62,6 +63,18 @@ export class MedicalRecordController {
     @Query() queryParams: FilterDto,
   ): Promise<IPaginate<MedicalRecordResponseDto> | MedicalRecordResponseDto[]> {
     return await this.medicalRecordService.findByClient(clientId, queryParams);
+  }
+
+  @Get(':id/documents')
+  @ApiOkResponse({
+    type: MedicalRecordDocumentResponseDto,
+    isArray: true,
+  })
+  async findDocuments(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() queryParams: FilterDto,
+  ): Promise<IPaginate<MedicalRecordDocumentResponseDto> | MedicalRecordDocumentResponseDto[]> {
+    return await this.medicalRecordService.findDocuments(id, queryParams);
   }
 
   @Get(':id')

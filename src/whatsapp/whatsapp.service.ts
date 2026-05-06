@@ -54,7 +54,7 @@ export class WhatsappService {
       type: 'template',
       template: {
         name: params.templateName,
-        language: { code: params.languageCode || 'en' },
+        language: { code: 'en' },
         components,
       },
     };

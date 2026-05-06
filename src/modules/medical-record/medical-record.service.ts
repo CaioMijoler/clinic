@@ -28,6 +28,8 @@ import { CreateMedicalRecordQuestionsDto } from './dto/medical-record-questions/
 import { MedicalRecordQuestion } from './entities/medical-record-questions.entity';
 import { CreateFeedbackDto } from '../feedback/dto/create-feedback.dto';
 import { Feedback } from '../feedback/entities/feedback.entity';
+import { MedicalRecordDocument } from './entities/medical-record-documents.entity';
+import { MedicalRecordDocumentResponseDto } from './dto/medical-record-documents/medical-record-documents-response.dto';
 
 @Injectable()
 export class MedicalRecordService {
@@ -35,6 +37,8 @@ export class MedicalRecordService {
     @InjectDataSource() private dataSource: DataSource,
     @InjectRepository(MedicalRecord)
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
+    @InjectRepository(MedicalRecordDocument)
+    private readonly medicalRecordDocumentRepository: Repository<MedicalRecordDocument>,
   ) {}
 
   async create(
@@ -166,6 +170,30 @@ export class MedicalRecordService {
         | MedicalRecordResponseDto[];
     } catch (error) {
       const message = 'Ocorreu um erro ao buscar os prontuários do cliente.';
+      Logger.error(message, error?.stack ?? error.message);
+      throw new BadRequestException(message);
+    }
+  }
+
+  async findDocuments(
+    medicalRecordId: number,
+    queryParams: FilterDto,
+  ): Promise<IPaginate<MedicalRecordDocumentResponseDto> | MedicalRecordDocumentResponseDto[]> {
+    try {
+      const params: FilterDto = {
+        ...queryParams,
+        filter: { ...queryParams.filter, medicalRecordId: String(medicalRecordId) },
+      };
+
+      const data = await findAllWithQueryBuilder<MedicalRecordDocument>(
+        this.medicalRecordDocumentRepository,
+        params,
+        'mrd',
+      );
+
+      return data;
+    } catch (error) {
+      const message = 'Ocorreu um erro ao buscar os documentos do prontuário.';
       Logger.error(message, error?.stack ?? error.message);
       throw new BadRequestException(message);
     }
