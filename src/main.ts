@@ -38,17 +38,19 @@ export async function bootstrap() {
       .addBearerAuth()
       .build(),
   );
-    SwaggerModule.setup('api/docs', app, document, {
-      customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui.min.css',
-      customJs: [
-        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-bundle.js',
-        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-standalone-preset.js',
-      ],
-    });
-
-  await app.listen(port, () => {
-    Logger.log(`Application started on port: ${port}`, 'Bootstrap');
+  SwaggerModule.setup('api/docs', app, document, {
+    customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui.min.css',
+    customJs: [
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-bundle.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-standalone-preset.js',
+    ],
   });
+
+  if (env !== 'production') {
+    await app.listen(port, () => {
+      Logger.log(`Application started on port: ${port}`, 'Bootstrap');
+    });
+  }
 
   await app.init();
   return app.getHttpAdapter().getInstance();
