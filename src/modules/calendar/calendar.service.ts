@@ -13,8 +13,12 @@ import { User } from '../user/entities/user.entity';
 import { MedicalRecord } from '../medical-record/entities/medical-record.entity';
 import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
 import { Client } from '../clients/entities/client.entity';
-import { v4 as uuidv4 } from 'uuid';
 import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-resume.dto';
+import * as crypto from 'crypto';
+
+const ALGORITHM = process.env.CRIPTO_ALG || 'aes-256-ctr';
+const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPT_SECRET_KEY || '', 'hex');
+const ENCRYPT_IV = Buffer.from(process.env.ENCRYPT_IV || '', 'hex');
 
 @Injectable()
 export class CalendarService {
@@ -163,22 +167,46 @@ export class CalendarService {
   }
 
   async confirmAttendance(
-    eventId: string,
+    medicalRecordId: string,
     token: string,
   ): Promise<{ success: boolean; message: string }> {
     try {
       const medicalRecord = await this.medicalRecordRepository.findOne({
         where: {
-          id: Number(eventId),
-          confirmationToken: token,
+          id: Number(medicalRecordId),
         },
         relations: ['client', 'user'],
       });
 
       if (!medicalRecord) {
-        throw new BadRequestException(
-          'Token inválido ou consulta não encontrada',
+        throw new BadRequestException('Consulta não encontrada');
+      }
+
+      if (!medicalRecord.confirmationToken) {
+        throw new BadRequestException('Consulta sem token de confirmação');
+      }
+
+      // Validação do Token Criptografado (Modo CTR com IV fixo)
+      try {
+        const decipher = crypto.createDecipheriv(
+          ALGORITHM,
+          ENCRYPTION_KEY,
+          ENCRYPT_IV,
         );
+        let decrypted = decipher.update(
+          medicalRecord.confirmationToken,
+          'hex',
+          'utf8',
+        );
+        decrypted += decipher.final('utf8');
+
+        const [decryptedId, decryptedUuid] = decrypted.split('@');
+
+        if (decryptedId !== medicalRecordId || decryptedUuid !== token) {
+          throw new Error('Token mismatch');
+        }
+      } catch (err) {
+        throw new BadRequestException('Token inválido para esta consulta');
       }
 
       if (medicalRecord.status === MedicalRecordStatusEnum.CONFIRMED_SCHEDULE) {
@@ -205,26 +233,70 @@ export class CalendarService {
     }
   }
 
-  async generateConfirmationToken(eventId: string): Promise<string> {
+  async cancelAttendance(
+    medicalRecordId: string,
+    token: string,
+  ): Promise<{ success: boolean; message: string }> {
     try {
       const medicalRecord = await this.medicalRecordRepository.findOne({
-        where: { id: Number(eventId) },
+        where: {
+          id: Number(medicalRecordId),
+        },
+        relations: ['client', 'user'],
       });
 
       if (!medicalRecord) {
-        throw new NotFoundException('Consulta não encontrada');
+        throw new BadRequestException('Consulta não encontrada');
       }
 
-      const token = uuidv4();
-      medicalRecord.confirmationToken = token;
+      if (!medicalRecord.confirmationToken) {
+        throw new BadRequestException('Consulta sem token de confirmação');
+      }
+
+      // Validação do Token Criptografado (Modo CTR com IV fixo)
+      try {
+        const decipher = crypto.createDecipheriv(
+          ALGORITHM,
+          ENCRYPTION_KEY,
+          ENCRYPT_IV,
+        );
+        let decrypted = decipher.update(
+          medicalRecord.confirmationToken,
+          'hex',
+          'utf8',
+        );
+        decrypted += decipher.final('utf8');
+
+        const [decryptedId, decryptedUuid] = decrypted.split('@');
+
+        if (decryptedId !== medicalRecordId || decryptedUuid !== token) {
+          throw new Error('Token mismatch');
+        }
+      } catch (err) {
+        throw new BadRequestException('Token inválido para esta consulta');
+      }
+
+      if (
+        medicalRecord.status === MedicalRecordStatusEnum.CANCELED_SCHEDULE ||
+        medicalRecord.status === MedicalRecordStatusEnum.CANCELED
+      ) {
+        throw new BadRequestException('Consulta já foi cancelada');
+      }
+
+      medicalRecord.status = MedicalRecordStatusEnum.CANCELED_SCHEDULE;
 
       await this.medicalRecordRepository.save(medicalRecord);
 
-      return token;
-    } catch (error: Error | any) {
-      const message: string = error
-        ? error.message
-        : 'Erro ao gerar token de confirmação';
+      await this.notifyProfessionalCancelation(medicalRecord);
+
+      return {
+        success: true,
+        message: 'Consulta cancelada com sucesso!',
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      const message =
+        error instanceof Error ? error.message : 'Erro ao cancelar consulta';
       Logger.error(message, error instanceof Error ? error.stack : '');
       throw new BadRequestException(message);
     }
@@ -239,6 +311,20 @@ export class CalendarService {
     } catch (error) {
       Logger.error(
         'Erro ao notificar profissional',
+        error instanceof Error ? error.stack : '',
+      );
+    }
+  }
+
+  private async notifyProfessionalCancelation(medicalRecord: MedicalRecord) {
+    try {
+      Logger.log(
+        `Paciente ${medicalRecord.clientId} cancelou a consulta ${medicalRecord.id}`,
+      );
+      // TODO: Implementar envio de notificação de cancelamento para o profissional
+    } catch (error) {
+      Logger.error(
+        'Erro ao notificar cancelamento ao profissional',
         error instanceof Error ? error.stack : '',
       );
     }

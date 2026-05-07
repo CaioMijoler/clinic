@@ -13,6 +13,7 @@ import { CalendarService } from './calendar.service';
 import { Request } from 'express';
 import { CreateCalendarDto } from './dto/create-calendar.dto';
 import { ConfirmAttendanceDto } from './dto/confirm-attendance.dto';
+import { CancelAttendanceDto } from './dto/cancel-attendance.dto';
 import { FilterCalendarDto } from './dto/filter-calendar.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-resume.dto';
@@ -56,24 +57,19 @@ export class CalendarController {
     return this.calendarService.remove(id, req?.user);
   }
 
-  @Post(':eventId/confirm-attendance')
+  @Post(':medicalRecordId/confirm-attendance')
   async confirmAttendance(
-    @Param('eventId') eventId: string,
+    @Param('medicalRecordId') medicalRecordId: string,
     @Body() confirmDto: ConfirmAttendanceDto,
   ) {
-    return this.calendarService.confirmAttendance(eventId, confirmDto.token);
+    return this.calendarService.confirmAttendance(medicalRecordId, confirmDto.token);
   }
 
-  @Get(':eventId/confirmation-link')
-  @ApiBearerAuth()
-  async getConfirmationLink(@Param('eventId') eventId: string) {
-    const token = await this.calendarService.generateConfirmationToken(eventId);
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const confirmationUrl = `${frontendUrl}/confirmar-presenca/${eventId}/${token}`;
-
-    return {
-      url: confirmationUrl,
-      token,
-    };
+  @Post(':medicalRecordId/cancel-attendance')
+  async cancelAttendance(
+    @Param('medicalRecordId') medicalRecordId: string,
+    @Body() cancelDto: CancelAttendanceDto,
+  ) {
+    return this.calendarService.cancelAttendance(medicalRecordId, cancelDto.token);
   }
 }

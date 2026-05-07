@@ -1,8 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, IsNull, Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { MedicalRecordStatusEnum } from '../../../utils/enum/medical-record.enum';
+import * as crypto from 'crypto';
+
+const ALGORITHM = process.env.CRIPTO_ALG || 'aes-256-ctr';
+const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPT_SECRET_KEY || '', 'hex');
+const ENCRYPT_IV = Buffer.from(process.env.ENCRYPT_IV || '', 'hex');
 import { MedicalRecord } from '../../medical-record/entities/medical-record.entity';
 import { WhatsappService } from '../../../whatsapp/whatsapp.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -80,14 +85,23 @@ export class CalendarReminderService {
 
       // Gera token de confirmação se ainda não existe
       if (!appointment.confirmationToken) {
-        appointment.confirmationToken = uuidv4();
+        const rawUuid = uuidv4();
+        const dataToEncrypt = `${appointment.id}@${rawUuid}`;
+
+        // Criptografia usando as chaves do ENV
+        const cipher = crypto.createCipheriv(ALGORITHM, ENCRYPTION_KEY, ENCRYPT_IV);
+        let encrypted = cipher.update(dataToEncrypt, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+
+        appointment.confirmationToken = encrypted;
         await this.medicalRecordRepository.update(appointment.id, {
           confirmationToken: appointment.confirmationToken,
         });
       }
 
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      const confirmationLink = `${frontendUrl}/confirmar-presenca/${appointment.id}/${appointment.confirmationToken}`;
+      const urlSafeToken = Buffer.from(appointment.confirmationToken, 'hex').toString('base64url');
+      const confirmationLink = `${frontendUrl}/confirmar-presenca/${urlSafeToken}`;
 
       // Formata o horário para exibição
       const appointmentTime = new Date(appointment.startDate).toLocaleString(
