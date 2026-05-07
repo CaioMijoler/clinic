@@ -41,13 +41,15 @@ export default () => {
     },
     redis: {
       host: process.env.REDIS_HOST ?? 'localhost',
-      port: Number(process.env.REDIS_PORT) ?? 6379,
+      port: process.env.REDIS_PORT ? Number(process.env.REDIS_PORT) : 6379,
       password: process.env.REDIS_PASSWORD,
     },
     cripto: {
-      alg: process.env.CRIPTO_ALG,
+      alg: process.env.CRIPTO_ALG || 'aes-256-ctr',
       secret: process.env.ENCRYPT_SECRET_KEY,
       iv: process.env.ENCRYPT_IV,
     },
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+    cronSecret: process.env.CRON_SECRET,
   };
 };

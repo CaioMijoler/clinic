@@ -9,6 +9,7 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CalendarService } from './calendar.service';
 import { Request } from 'express';
 import { CreateCalendarDto } from './dto/create-calendar.dto';
@@ -26,12 +27,14 @@ export class CalendarController {
   constructor(
     private readonly calendarService: CalendarService,
     private readonly calendarReminderService: CalendarReminderService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Get('cron/reminders')
   async triggerReminders(@Req() req: Request) {
     const authHeader = req.headers['authorization'];
-    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const cronSecret = this.configService.get<string>('cronSecret');
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       throw new BadRequestException('Unauthorized cron trigger');
     }
 

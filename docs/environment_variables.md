@@ -54,3 +54,24 @@ Utilizado para proteção de dados sensíveis no banco de dados.
 | `CRIPTO_ALG` | Algoritmo de criptografia (ex: `aes-256-ctr`) |
 | `ENCRYPT_SECRET_KEY` | Chave secreta em formato hexadecimal (64 caracteres) |
 | `ENCRYPT_IV` | Vetor de inicialização em formato hexadecimal (32 caracteres) |
+## Acesso Programático (ConfigService)
+
+Seguindo as melhores práticas de **NestJS**, não acessamos `process.env` diretamente nos serviços. Em vez disso, utilizamos o `ConfigService` injetado via construtor.
+
+### Padrão de Acesso Sênior:
+
+```typescript
+import { ConfigService } from '@nestjs/config';
+
+constructor(private readonly configService: ConfigService) {
+  // Acesso tipado e com cast automático (definido no app.config.ts)
+  const redisPort = this.configService.get<number>('redis.port');
+  const isProd = this.configService.get<string>('env') === 'production';
+}
+```
+
+> [!TIP]
+> O mapeamento de tipos (ex: string para number) é realizado centralizadamente no arquivo `src/config/app.config.ts`. Sempre verifique este arquivo antes de adicionar novas variáveis.
+
+---
+**Observação:** O sistema falhará no bootstrap caso variáveis críticas (como credenciais de DB) não estejam presentes ou possuam formato inválido.

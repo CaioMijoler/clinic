@@ -9,11 +9,11 @@ export class SupabaseService {
 
   constructor(private readonly configService: ConfigService) {
   // Pega a URL e remove qualquer barra ou sufixo /rest/v1/ se existir
-  const rawUrl = this.configService.get<string>('SUPABASE_URL');
+  const rawUrl = this.configService.get<string>('supabase.url');
   const supabaseUrl = rawUrl?.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
 
   // PARA O ADMIN FUNCIONAR: Esta chave PRECISA ser a "service_role" (sb_secret_...)
-  const supabaseKey = this.configService.get<string>('SUPABASE_KEY');
+  const supabaseKey = this.configService.get<string>('supabase.key');
 
   if (!supabaseUrl || !supabaseKey) {
     this.logger.error('Supabase URL or Key is missing');

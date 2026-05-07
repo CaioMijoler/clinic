@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CreateCalendarDto } from './dto/create-calendar.dto';
 import { FilterCalendarDto } from './dto/filter-calendar.dto';
 import { DataSource, Repository, Between, FindManyOptions } from 'typeorm';
@@ -16,9 +17,7 @@ import { Client } from '../clients/entities/client.entity';
 import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-resume.dto';
 import * as crypto from 'crypto';
 
-const ALGORITHM = process.env.CRIPTO_ALG || 'aes-256-ctr';
-const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPT_SECRET_KEY || '', 'hex');
-const ENCRYPT_IV = Buffer.from(process.env.ENCRYPT_IV || '', 'hex');
+
 
 @Injectable()
 export class CalendarService {
@@ -26,6 +25,7 @@ export class CalendarService {
     @InjectDataSource() private dataSource: DataSource,
     @InjectRepository(MedicalRecord)
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(createCalendarDto: CreateCalendarDto, user: User) {
@@ -186,12 +186,16 @@ export class CalendarService {
         throw new BadRequestException('Consulta sem token de confirmação');
       }
 
-      // Validação do Token Criptografado (Modo CTR com IV fixo)
+      // Validação do Token Criptografado (Modo CTR com IV fixo) via ConfigService
       try {
+        const algorithm = this.configService.get<string>('cripto.alg');
+        const key = Buffer.from(this.configService.get<string>('cripto.secret') || '', 'hex');
+        const iv = Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex');
+
         const decipher = crypto.createDecipheriv(
-          ALGORITHM,
-          ENCRYPTION_KEY,
-          ENCRYPT_IV,
+          algorithm,
+          key,
+          iv,
         );
         let decrypted = decipher.update(
           medicalRecord.confirmationToken,
@@ -253,12 +257,16 @@ export class CalendarService {
         throw new BadRequestException('Consulta sem token de confirmação');
       }
 
-      // Validação do Token Criptografado (Modo CTR com IV fixo)
+      // Validação do Token Criptografado (Modo CTR com IV fixo) via ConfigService
       try {
+        const algorithm = this.configService.get<string>('cripto.alg');
+        const key = Buffer.from(this.configService.get<string>('cripto.secret') || '', 'hex');
+        const iv = Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex');
+
         const decipher = crypto.createDecipheriv(
-          ALGORITHM,
-          ENCRYPTION_KEY,
-          ENCRYPT_IV,
+          algorithm,
+          key,
+          iv,
         );
         let decrypted = decipher.update(
           medicalRecord.confirmationToken,

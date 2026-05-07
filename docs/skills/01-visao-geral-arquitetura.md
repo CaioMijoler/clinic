@@ -1,99 +1,103 @@
-# SKILL: Visão Geral da Arquitetura — Clinic Backend
+# 🏛️ Visão Geral da Arquitetura — Clinic Backend
 
-## Stack Tecnológica
+O **Clinic Backend** é construído sobre uma arquitetura de **Monólito Modular**, utilizando o ecossistema NestJS para garantir escalabilidade e manutenibilidade.
 
-| Camada | Tecnologia |
-|---|---|
-| Framework | NestJS v10 |
-| ORM | TypeORM v0.3 |
-| Banco de Dados | MySQL (via `mysql2`) |
-| Autenticação | JWT (`@nestjs/jwt` + `passport`) |
-| Documentação API | Swagger (`@nestjs/swagger`) |
-| Validação | `class-validator` + `class-transformer` |
-| HTTP Client | Axios |
-| Logging | NestJS Logger nativo |
-| Integrações | WhatsApp Business API |
-| Runtime | Node.js + TypeScript |
+## 📊 Diagrama de Arquitetura de Alto Nível
 
-## Estrutura de Pastas Raiz
+```mermaid
+graph TD
+    Client[Client Apps: Web/Mobile] --> Gateway[API Gateway / NestJS Global Guards]
+    
+    subgraph "Core Framework (NestJS)"
+        Gateway --> Auth[Auth Module]
+        Gateway --> Modules[Feature Modules]
+        
+        subgraph "Feature Modules (Bounded Contexts)"
+            Modules --> Clients[Clients Module]
+            Modules --> MedicalRecord[Medical Record Module]
+            Modules --> Calendar[Calendar Module]
+            MedicalRecord --> Treatment[Treatment Module]
+            MedicalRecord --> Feedback[Feedback Module]
+        end
+        
+        subgraph "Shared Services"
+            Config[Config Service]
+            Redis[Redis Cache Service]
+            Storage[Storage Service]
+        end
+    end
 
-```
-clinic/
-├── src/
-│   ├── app.module.ts          # Módulo raiz — registra todos os módulos e middlewares globais
-│   ├── main.ts                # Bootstrap da aplicação NestJS
-│   ├── types.d.ts             # Declarações de tipos globais (ex: req.user)
-│   ├── config/                # Configuração centralizada via env vars
-│   ├── database/              # Configuração TypeORM + migrations
-│   ├── middleware/            # Middlewares globais (auth + logger)
-│   ├── modules/               # Módulos de domínio (features)
-│   ├── utils/                 # Utilitários compartilhados
-│   └── whatsapp/              # Integração WhatsApp (separado por ser serviço externo)
-├── docker-compose.yml
-├── package.json
-├── tsconfig.json
-└── nest-cli.json
-```
+    subgraph "External Integrations"
+        Calendar --> Google[Google Calendar API]
+        Modules --> WhatsApp[WhatsApp Business API]
+        Auth --> SupabaseAuth[Supabase Auth]
+    end
 
-## Fluxo de Requisição
-
-```
-HTTP Request
-    │
-    ▼
-LoggerMiddleware        ← loga método, URL, tempo de resposta
-    │
-    ▼
-AuthMiddleware          ← valida Bearer token JWT via AuthService.verifyToken()
-    │                     injeta req.user com dados do usuário autenticado
-    ▼
-Controller              ← recebe DTO validado, chama Service
-    │
-    ▼
-Service                 ← lógica de negócio, transações, integrações externas
-    │
-    ▼
-Repository / DataSource ← TypeORM (Repository pattern ou DataSource.transaction())
-    │
-    ▼
-MySQL Database
+    subgraph "Persistence Layer"
+        Modules --> TypeORM[TypeORM Entity Manager]
+        TypeORM --> DB[(PostgreSQL / MySQL)]
+        Redis --> Cache[(Redis DB)]
+    end
 ```
 
-## Rotas Públicas (sem AuthMiddleware)
+## 🏗️ Design Principles
 
-Configuradas no `AppModule.configure()`:
-- `POST /v1/auth/login`
-- `GET /health`
-- `POST /v1/user`
+1.  **Modularidade Extrema**: Cada diretório em `src/modules` representa um subdomínio de negócio isolado. A comunicação entre módulos deve ser feita preferencialmente via injeção de serviços, evitando dependências circulares.
+2.  **Type Safety**: Utilização rigorosa de TypeScript, incluindo DTOs tipados e interfaces para todas as integrações externas.
+3.  **Centralized Configuration**: Nenhuma variável de ambiente é acessada via `process.env` fora do `app.config.ts`. Todos os componentes devem injetar o `ConfigService`.
+4.  **Graceful Degradation**: Integrações externas (WhatsApp, Google) possuem tratamento de erro isolado para não impactar o fluxo principal da aplicação.
 
-## Módulos Registrados no AppModule
+## 🛠️ Stack Tecnológica Detalhada
 
+| Camada | Tecnologia | Justificativa Sênior |
+| :--- | :--- | :--- |
+| **Framework** | NestJS v10 | Padronização, suporte a DI e ecossistema robusto para Node.js. |
+| **ORM** | TypeORM v0.3 | Flexibilidade para Data Mapper pattern e suporte excelente a migrations. |
+| **Cache** | Redis (ioredis) | Redução de latência em operações repetitivas e controle de rate limiting. |
+| **Auth** | Supabase/JWT | Offloading de segurança e gerenciamento de identidade para um provedor especializado. |
+| **Validation** | Class Validator | Validação declarativa em tempo de execução via decorators nos DTOs. |
+
+## 🔄 Fluxo de Processamento de Requisição (Request Lifecycle)
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant M as Middleware (Logger/Auth)
+    participant G as Guards (JWT/Roles)
+    participant P as Pipes (Validation)
+    participant Ctrl as Controller
+    participant S as Service
+    participant R as Repository
+    participant DB as Database
+
+    C->>M: Request
+    M->>G: Process Token
+    G->>P: Validate DTO
+    P->>Ctrl: Call Handler
+    Ctrl->>S: Business Logic
+    S->>R: Data Access
+    R->>DB: Query
+    DB-->>R: Result
+    R-->>S: Entity
+    S-->>Ctrl: Result Object
+    Ctrl-->>C: Response (JSON)
 ```
-ConfigModule          → variáveis de ambiente
-DatabaseModule        → conexão TypeORM com MySQL
-HealthModule          → endpoint de health check
-AuthModule            → login/logout/verifyToken
-UserModule            → CRUD de usuários (médicos/assistentes)
-CalendarModule        → agendamento de consultas
-ClientsModule         → cadastro de pacientes
-WhatsappModule        → envio de mensagens WhatsApp
-FeedbackModule        → feedback de tratamento
-QuestionsModule       → guia de perguntas de psicanálise
-TreatmentModule       → passos do tratamento
-PathologiesModule     → cadastro de patologias
-MedicalRecordModule   → prontuário central (orquestra os demais)
+
+## 📂 Padrão de Pasta por Módulo
+
+Seguimos a convenção NestJS para organização interna de cada módulo:
+```
+modules/my-module/
+├── my-module.module.ts      # Definição do módulo e injeções
+├── my-module.controller.ts  # Endpoints e roteamento
+├── my-module.service.ts     # Lógica de negócio (Domain logic)
+├── dto/                     # Schemas de validação (In/Out)
+│   ├── create-my-module.dto.ts
+│   └── response-my-module.dto.ts
+└── entities/                # Definição de tabelas (ORM)
+    └── my-module.entity.ts
 ```
 
-## Padrão de Prefixo de Rotas
-
-Todas as rotas usam o prefixo `v1/`:
-- `v1/clients`
-- `v1/medical-record`
-- `v1/pathologies`
-- `v1/questions`
-- `v1/treatment`
-- `v1/feedback`
-- `v1/calendar`
-- `v1/whatsapp`
-- `v1/auth`
-- `v1/user`
+---
+> [!NOTE]
+> Esta arquitetura foi desenhada para suportar uma migração futura para Microserviços, caso o volume de dados ou carga de usuários exija escalabilidade horizontal independente por módulo.

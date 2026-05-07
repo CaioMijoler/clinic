@@ -1,13 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { IsNull, Repository } from 'typeorm';
 import { MedicalRecordStatusEnum } from '../../../utils/enum/medical-record.enum';
 import * as crypto from 'crypto';
-
-const ALGORITHM = process.env.CRIPTO_ALG || 'aes-256-ctr';
-const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPT_SECRET_KEY || '', 'hex');
-const ENCRYPT_IV = Buffer.from(process.env.ENCRYPT_IV || '', 'hex');
 import { MedicalRecord } from '../../medical-record/entities/medical-record.entity';
 import { WhatsappService } from '../../../whatsapp/whatsapp.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,6 +17,7 @@ export class CalendarReminderService {
     @InjectRepository(MedicalRecord)
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
     private readonly whatsappService: WhatsappService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -88,8 +86,12 @@ export class CalendarReminderService {
         const rawUuid = uuidv4();
         const dataToEncrypt = `${appointment.id}@${rawUuid}`;
 
-        // Criptografia usando as chaves do ENV
-        const cipher = crypto.createCipheriv(ALGORITHM, ENCRYPTION_KEY, ENCRYPT_IV);
+        // Criptografia usando as chaves do ConfigService
+        const algorithm = this.configService.get<string>('cripto.alg');
+        const key = Buffer.from(this.configService.get<string>('cripto.secret') || '', 'hex');
+        const iv = Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex');
+
+        const cipher = crypto.createCipheriv(algorithm, key, iv);
         let encrypted = cipher.update(dataToEncrypt, 'utf8', 'hex');
         encrypted += cipher.final('hex');
 
@@ -99,7 +101,7 @@ export class CalendarReminderService {
         });
       }
 
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl = this.configService.get<string>('frontendUrl');
       const urlSafeToken = Buffer.from(appointment.confirmationToken, 'hex').toString('base64url');
       const confirmationLink = `${frontendUrl}/confirmar-presenca/${urlSafeToken}`;
 

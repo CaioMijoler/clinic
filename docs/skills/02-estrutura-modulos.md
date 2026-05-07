@@ -138,3 +138,32 @@ const result = await this.dataSource.transaction(async (manager) => {
 ```
 
 Módulos que usam `@InjectDataSource()`: `MedicalRecordService`, `CalendarService`.
+## Princípios de Design de Módulos (Senior Insights)
+
+### 1. Single Responsibility (SRP)
+Cada módulo deve gerenciar exatamente um **Bounded Context**. Se um módulo começa a crescer demais (ex: `MedicalRecord` gerencia também pagamentos), é hora de refatorar em um novo módulo.
+
+### 2. Encapsulamento
+Use o decorator `@Global()` com extrema cautela. A forma sênior de compartilhar funcionalidades é via `exports` no módulo e `imports` no módulo consumidor. Isso torna o gráfico de dependências explícito.
+
+### 3. DTOs como Contratos
+Nunca exponha suas Entidades TypeORM diretamente nos Controllers.
+-   **Entidade:** Mapeia o banco de dados. Pode conter dados sensíveis.
+-   **DTO:** Mapeia a API. Define exatamente o que o cliente vê e envia.
+*Use `class-transformer` para ocultar campos ou formatar dados na saída.*
+
+### 4. Tratamento de Erros Centralizado vs Local
+Embora tenhamos filtros globais, o tratamento de erro no Service (exemplo acima) é preferível para erros de regra de negócio, pois permite logs contextuais antes do re-throw.
+
+## Fluxo de Dependência Recomendado
+
+```mermaid
+graph LR
+    Controller --> Service
+    Service --> Repository
+    Service --> ExternalServices
+    Service --> OtherModulesServices
+```
+
+> [!WARNING]
+> **Dependências Circulares:** Se o Módulo A precisa do Módulo B e vice-versa, sua arquitetura está acoplada. Considere extrair a lógica comum para um terceiro módulo ou utilizar eventos (`EventEmitter2`).

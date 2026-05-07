@@ -20,6 +20,7 @@ export async function bootstrap() {
 
   const configService = app.get<ConfigService>(ConfigService);
   const port = configService.get('port') || 3001;
+  const env = configService.get('env');
 
   app.enableCors();
   app.useGlobalPipes(
@@ -28,24 +29,26 @@ export async function bootstrap() {
     }),
   );
 
-  if (process.env.NODE_ENV !== 'production') {
-    const document = SwaggerModule.createDocument(
-      app,
-      new DocumentBuilder()
-        .setTitle('Clinic API')
-        .setDescription('Clinical Backend System')
-        .setVersion('1.0.0')
-        .addBearerAuth()
-        .build(),
-    );
-    SwaggerModule.setup('/', app, document);
-  }
-
-  if (process.env.NODE_ENV !== 'production') {
-    await app.listen(port, () => {
-      Logger.log(`Application started on port: ${port}`, 'Bootstrap');
+  const document = SwaggerModule.createDocument(
+    app,
+    new DocumentBuilder()
+      .setTitle('Clinic API')
+      .setDescription('Clinical Backend System')
+      .setVersion('1.0.0')
+      .addBearerAuth()
+      .build(),
+  );
+    SwaggerModule.setup('api/docs', app, document, {
+      customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui.min.css',
+      customJs: [
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-bundle.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-standalone-preset.js',
+      ],
     });
-  }
+
+  await app.listen(port, () => {
+    Logger.log(`Application started on port: ${port}`, 'Bootstrap');
+  });
 
   await app.init();
   return app.getHttpAdapter().getInstance();

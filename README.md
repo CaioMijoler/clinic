@@ -1,326 +1,193 @@
-# 🏥 Clinic Backend — Sistema de Gestão Clínica
+# 🏥 Clinic Backend — Enterprise Clinical Management System
 
-Backend do sistema de gestão para clínica médica, desenvolvido em **NestJS + TypeORM + MySQL**.
-Gerencia o ciclo completo do paciente: cadastro, prontuário, agendamento, tratamento e comunicação via WhatsApp.
+[![NestJS](https://img.shields.io/badge/framework-NestJS%20v10-E0234E?logo=nestjs)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/language-TypeScript-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![TypeORM](https://img.shields.io/badge/orm-TypeORM%20v0.3-fcad03)](https://typeorm.io/)
+[![Database](https://img.shields.io/badge/database-PostgreSQL%20/%20MySQL-336791?logo=postgresql)](https://www.postgresql.org/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+Backend robusto e escalável para gestão de clínicas médicas, estruturado seguindo os princípios de **Clean Architecture** e **Modular Design**. Gerencia desde o fluxo de pacientes e prontuários até integrações complexas com Google Calendar e WhatsApp Business API.
 
 ---
+## Estrutura de Pastas Raiz
 
-## 📋 Funcionalidades
+```
+clinic/
+├── src/
+│   ├── app.module.ts          # Módulo raiz — registra todos os módulos e middlewares globais
+│   ├── main.ts                # Bootstrap da aplicação NestJS
+│   ├── types.d.ts             # Declarações de tipos globais (ex: req.user)
+│   ├── config/                # Configuração centralizada via env vars
+│   ├── database/              # Configuração TypeORM + migrations
+│   ├── middleware/            # Middlewares globais (auth + logger)
+│   ├── modules/               # Módulos de domínio (features)
+│   ├── utils/                 # Utilitários compartilhados
+│   └── whatsapp/              # Integração WhatsApp (separado por ser serviço externo)
+├── docker-compose.yml
+├── package.json
+├── tsconfig.json
+└── nest-cli.json
+```
 
-| Módulo | Descrição |
-|---|---|
-| **Pacientes** | Cadastro completo com endereço, CPF, RG, email e telefone |
-| **Prontuário** | Registro de sintomas, exame clínico, patologias, tratamento e conclusão |
-| **Agendamento** | Integração com **Google Calendar** para agendamento de consultas |
-| **Patologias** | Cadastro de CIDs para vinculação ao prontuário |
-| **Tratamento** | Passo a passo do tratamento associado ao prontuário |
-| **Feedback** | Coleta de feedback do paciente sobre o tratamento |
-| **Perguntas (Psicanálise)** | Guia de perguntas pré-cadastradas vinculadas ao prontuário |
-| **WhatsApp** | Envio de mensagens via **WhatsApp Business API** |
-| **Autenticação** | Login/logout com JWT (sessão única por usuário) |
+## Fluxo de Requisição
+
+```
+HTTP Request
+    │
+    ▼
+LoggerMiddleware        ← loga método, URL, tempo de resposta
+    │
+    ▼
+AuthMiddleware          ← valida Bearer token JWT via AuthService.verifyToken()
+    │                     injeta req.user com dados do usuário autenticado
+    ▼
+Controller              ← recebe DTO validado, chama Service
+    │
+    ▼
+Service                 ← lógica de negócio, transações, integrações externas
+    │
+    ▼
+Repository / DataSource ← TypeORM (Repository pattern ou DataSource.transaction())
+    │
+    ▼
+MySQL Database
+```
+
+## 🏛️ Arquitetura e Design Patterns
+
+O projeto foi concebido como um **Monólito Modular**, priorizando baixo acoplamento e alta coesão entre os domínios de negócio.
+
+### Key Patterns:
+- **Repository Pattern:** Abstração da camada de persistência para facilitar testes e troca de provedores de dados.
+- **DTO (Data Transfer Objects):** Rigoroso controle de entrada e saída de dados com validação via `class-validator`.
+- **Dependency Injection:** Utilização extensiva do DI do NestJS para gerenciamento de ciclo de vida e inversão de controle.
+- **Middleware-Based Auth:** Pipeline de autenticação centralizado com injeção de contexto de usuário.
+- **Dynamic Filtering & Pagination:** Sistema genérico de filtros dinâmicos e paginação via query parameters.
 
 ---
 
 ## 🛠️ Stack Tecnológica
 
-- **Framework:** NestJS v10
-- **ORM:** TypeORM v0.3
-- **Banco de Dados:** MySQL
-- **Autenticação:** JWT (`@nestjs/jwt`)
-- **Documentação API:** Swagger (`@nestjs/swagger`)
-- **Validação:** `class-validator` + `class-transformer`
-- **Integrações:** Google Calendar API, WhatsApp Business API
-- **Linguagem:** TypeScript
+| Camada | Tecnologias |
+| :--- | :--- |
+| **Core Framework** | [NestJS v10](https://nestjs.com/) |
+| **Linguagem** | [TypeScript](https://www.typescriptlang.org/) |
+| **Persistência** | [TypeORM v0.3](https://typeorm.io/) + PostgreSQL/MySQL |
+| **Cache & Queue** | [Redis](https://redis.io/) (via `ioredis`) |
+| **Auth** | JWT (JSON Web Tokens) + Supabase Auth |
+| **API Doc** | [Swagger / OpenAPI 3.0](https://swagger.io/) |
+| **Storage** | Supabase Storage (S3 compatible) |
+| **Mensageria** | WhatsApp Business API (Meta Graph API) |
 
 ---
 
-## 🚀 Configuração e Instalação
+## 🚀 Guia de Inicialização Rápida
 
-### Pré-requisitos
-
-- Node.js >= 18
-- Docker e Docker Compose
-- Yarn
-
-### 1. Clonar o repositório
+### 1. Ambiente Local Completo com Docker
+Para rodar a API e todas as dependências (Postgres + Redis) em um único comando:
 
 ```bash
-git clone https://gitlab.com/caio.mijoler/project-paulo.git
-cd project-paulo
+docker-compose up -d --build
 ```
 
-### 2. Configurar variáveis de ambiente
+> [!NOTE]
+> A API estará acessível em `http://localhost:3001` e o Swagger em `http://localhost:3001/api`.
+> Os logs podem ser acompanhados via `docker-compose logs -f api`.
 
+### 2. Configuração de Variáveis (ConfigService)
+O sistema utiliza o `ConfigService` do NestJS para gerenciamento centralizado.
 ```bash
 cp ".env example" .env
 ```
+> [!IMPORTANT]
+> Certifique-se de configurar corretamente o `REDIS_PORT` e `DB_PORT` para que o cast para `number` no `ConfigService` funcione como esperado.
 
-Edite o `.env` com os valores do seu ambiente:
-
-```env
-# Aplicação
-PORT=3000
-ENV=dev
-LOG_LEVEL=debug
-
-# Banco de dados MySQL
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=clinic
-DB_USER=root
-DB_PASSWORD=sua-senha
-
-# WhatsApp Business API
-WHATSAPP_URL=https://graph.facebook.com/v17.0
-WHATSAPP_PHONE_NUMBER_ID=seu-phone-number-id
-WHATSAPP_ACCESS_TOKEN=seu-access-token
-
-# Criptografia de senha
-CRIPTO_ALG=aes-256-ctr
-ENCRYPT_SECRET_KEY=sua-chave-secreta
-ENCRYPT_IV=seu-iv
-```
-
-### 3. Subir o banco de dados
-
+### 3. Instalação e Execução Manual (Sem Docker para API)
+Se desejar rodar apenas as dependências no Docker e a API localmente:
 ```bash
-docker-compose up -d
-```
+# Sobe apenas Postgres e Redis
+docker-compose up -d db redis
 
-### 4. Instalar dependências
-
-```bash
+# Instala e roda a API
 yarn install
-```
-
-### 5. Rodar as migrations
-
-```bash
-npm run migrations:run
-```
-
-### 6. Iniciar o servidor
-
-```bash
-# Desenvolvimento (com hot reload)
 yarn dev
-
-# Produção
-yarn start:prod
 ```
-
-A API estará disponível em `http://localhost:3000`.
-Documentação Swagger em `http://localhost:3000/api`.
+A API estará disponível em `http://localhost:3001` (conforme definido no `.env`).
+Acesse o Swagger em: `http://localhost:3001/api`
 
 ---
 
-## 📦 Estrutura do Projeto
+## 📂 Estrutura de Domínios (Screaming Architecture)
 
-```
+```text
 src/
-├── app.module.ts           # Módulo raiz
-├── main.ts                 # Bootstrap da aplicação
-├── config/                 # Configuração centralizada via env vars
-├── database/               # Configuração TypeORM + migrations
-├── middleware/             # Auth middleware (JWT) + Logger middleware
-├── utils/                  # Utilitários: filtros, paginação, validação
-├── whatsapp/               # Integração WhatsApp Business API
-└── modules/
-    ├── auth/               # Login / Logout / Verify token
-    ├── user/               # Cadastro de usuários (médicos/assistentes)
-    ├── clients/            # Cadastro de pacientes
-    ├── medical-record/     # Prontuário (módulo central)
-    ├── calendar/           # Agendamento
-    ├── pathologies/        # Cadastro de patologias (CID)
-    ├── questions/          # Guia de perguntas de psicanálise
-    ├── treatment/          # Passos do tratamento
-    ├── feedback/           # Feedback do tratamento
-    └── health/             # Health check endpoint
-```
-
-Cada módulo segue a estrutura padrão NestJS:
-```
-<modulo>/
-├── <modulo>.module.ts
-├── <modulo>.controller.ts
-├── <modulo>.service.ts
-├── dto/
-│   ├── create-<modulo>.dto.ts
-│   └── update-<modulo>.dto.ts
-└── entities/
-    └── <modulo>.entity.ts
+├── cache/            # Abstração de caching (Redis)
+├── config/           # Configurações tipadas (AppConfig, DatabaseConfig)
+├── database/         # Migrations e Data Source
+├── middleware/       # Guards, Interceptors e Middlewares globais
+├── modules/          # Domínios de Negócio (Bounded Contexts)
+│   ├── auth/         # Autenticação e Autorização
+│   ├── clients/      # Gestão de Pacientes
+│   ├── medical-record/# Prontuário (Orquestrador de Domínio)
+│   └── ...           # Outros subdomínios (calendar, pathologies, etc)
+└── whatsapp/         # Adaptador para integração externa
 ```
 
 ---
 
-## 🔐 Autenticação
+## 🔍 Fluxos de Dados e Padrões de API
 
-Todas as rotas são protegidas por JWT, **exceto**:
+### 1. Sistema de Paginação e Filtros
+Todos os recursos de listagem suportam um motor de busca avançado:
+`GET /v1/clients?paginate=true&current_page=1&per_page=10&search=João&search_fields=name,document`
 
-| Rota | Método | Descrição |
-|---|---|---|
-| `/v1/auth/login` | POST | Login com email e senha |
-| `/v1/user` | POST | Criação de novo usuário |
-| `/health` | GET | Health check |
+| Parâmetro | Função |
+| :--- | :--- |
+| `filter[field]` | Filtro de igualdade exata. |
+| `search` | Termo para busca textual parcial (LIKE). |
+| `search_fields` | Campos onde a busca `search` será aplicada (OR). |
+| `relations` | Eager loading de relacionamentos (Comma-separated). |
 
-**Uso do token:**
-```
-Authorization: Bearer <token-retornado-no-login>
+### 2. Ciclo de Vida da Configuração
+As configurações são carregadas via `app.config.ts` e acessadas via `ConfigService`:
+```typescript
+// Exemplo de uso sênior no RedisService
+constructor(private readonly configService: ConfigService) {
+  const port = this.configService.get<number>('redis.port'); // Type-safe casting
+}
 ```
 
 ---
 
-## 🗃️ Migrations
+## 🧪 Estratégia de Testes
+
+Priorizamos testes de integração para fluxos críticos de negócio e testes unitários para lógica complexa.
 
 ```bash
-# Rodar todas as migrations pendentes
-npm run migrations:run
-
-# Reverter a última migration
-npm run migrations:revert
-
-# Criar uma nova migration
-npm run migration:create -- NomeDaMigration
-
-# Ver status das migrations
-npm run migration:show
-```
-
----
-
-## 📡 Endpoints Principais
-
-| Rota | Método | Descrição |
-|---|---|---|
-| `/v1/auth/login` | POST | Autenticação |
-| `/v1/clients` | GET / POST | Listar / Criar pacientes |
-| `/v1/clients/:id` | GET / PUT / DELETE | Gerenciar paciente |
-| `/v1/medical-record` | GET / POST | Listar / Criar prontuários |
-| `/v1/medical-record/:id` | GET / PUT / DELETE | Gerenciar prontuário |
-| `/v1/calendar` | GET / POST / DELETE | Gerenciar agendamentos |
-| `/v1/pathologies` | GET / POST | Listar / Criar patologias |
-| `/v1/questions` | GET / POST | Listar / Criar perguntas |
-| `/v1/treatment` | GET / POST | Listar / Criar tratamentos |
-| `/v1/feedback` | GET / POST | Listar / Criar feedbacks |
-| `/v1/whatsapp` | POST | Enviar mensagem WhatsApp |
-| `/health` | GET | Status da aplicação |
-
-Para detalhes completos de request/response, acesse o **Swagger**: `http://localhost:3000/api`
-
----
-
-## 🔍 Filtros e Paginação
-
-Todos os endpoints de listagem suportam query params para filtragem dinâmica:
-
-```
-GET /v1/clients?paginate=true&current_page=1&per_page=10&search=João&search_fields=name,document&relations=clientAddress&sort[createdAt]=desc
-```
-
-| Parâmetro | Tipo | Descrição |
-|---|---|---|
-| `paginate` | boolean | Ativa paginação |
-| `current_page` | number | Página atual (padrão: 1) |
-| `per_page` | number | Itens por página (padrão: 10) |
-| `filter[campo]` | string | Filtro exato por campo: status, datas, IDs |
-| `search` | string | Busca livre OR LIKE. **Usar com `search_fields`** |
-| `search_fields` | string (CSV) | Campos onde o `search` é aplicado: `name,document` |
-| `relations` | string (CSV) | Relations para carregar: `client,treatments` |
-| `fields` | string (CSV) | Campos a retornar: `id,name,email` |
-| `sort[campo]` | asc\|desc | Ordenação |
-
-### `filter` vs `search`
-
-| Situação | Usar | Exemplo |
-|---|---|---|
-| Valor exato / Status / Datas | `filter` | `filter[status]=CREATED` |
-| Busca livre em **um** campo | `filter` | `filter[name]=João` |
-| Busca livre em **múltiplos** campos (OR) | `search` + `search_fields` | `search=João&search_fields=name,document` |
-
-**Exemplos por módulo:**
-```
-# Pacientes — busca por nome OU CPF
-GET /v1/clients?search=João&search_fields=name,document
-
-# Patologias — busca por código OU descrição
-GET /v1/pathologies?search=J00&search_fields=code,description
-
-# Prontuários SCHEDULED buscando por sintoma ou conclusão
-GET /v1/medical-record?filter[status]=SCHEDULED&search=dor&search_fields=symptoms,conclusion
-```
-
----
-
-## 📄 Documentação Adicional
-
-A documentação de arquitetura detalhada está em [`docs/skills/`](./docs/skills/):
-
-| Documento | Conteúdo |
-|---|---|
-| [01 - Visão Geral](./docs/skills/01-visao-geral-arquitetura.md) | Stack, estrutura, fluxo de requisição |
-| [02 - Estrutura de Módulos](./docs/skills/02-estrutura-modulos.md) | Padrões de Module/Controller/Service |
-| [03 - Modelo de Dados](./docs/skills/03-modelo-de-dados.md) | Entidades, colunas, relacionamentos |
-| [04 - Validação de DTOs](./docs/skills/04-validacao-dtos.md) | ErrorMessages, class-validator, transforms |
-| [05 - Filtro e Paginação](./docs/skills/05-filtro-e-paginacao.md) | FilterDto, search, filter handlers |
-| [06 - Autenticação](./docs/skills/06-autenticacao.md) | Fluxo JWT, middleware, req.user |
-| [07 - Integrações Externas](./docs/skills/07-integracoes-externas.md) | Google Calendar, WhatsApp API |
-| [08 - Domínios de Negócio](./docs/skills/08-dominios-negocio.md) | Escopo completo por módulo |
-| [09 - Guia Novo Módulo](./docs/skills/09-guia-novo-modulo.md) | Checklist para criar um novo módulo |
-| [10 - Testes](./docs/skills/10-testes.md) | Estrutura, comandos, factories e convenções de testes |
-
----
-
-## 🧪 Testes
-
-### Estrutura
-
-```
-test/                          # Testes na raiz do projeto
-└── medical-record/
-    ├── medical-record.factory.ts          # Fábricas de dados (makeUser, makeClient, makeMedicalRecord...)
-    └── medical-record-find-by-client.spec.ts  # Testes do endpoint GET /client/:clientId
-
-src/
-└── modules/
-    └── health/
-        └── health.controller.spec.ts     # Unit test do health check
-```
-
-### Comandos
-
-```bash
-# Rodar todos os testes
+# Executar todos os testes
 yarn test
 
-# Rodar em modo watch (reroda ao salvar)
+# Watch mode para TDD
 yarn test:watch
 
-# Rodar com relatório de coverage
+# Relatório de Cobertura
 yarn test:cov
-
-# Rodar um arquivo específico (sem coverage)
-npx jest test/medical-record/medical-record-find-by-client.spec.ts --no-coverage
-
-# Rodar todos os testes de uma pasta
-npx jest test/medical-record --no-coverage
-
-# Rodar com nome de cenário específico (padrão -t)
-npx jest --no-coverage -t "deve retornar os prontuários"
 ```
-
-### Convenções
-
-- **Factories** em `test/<modulo>/<modulo>.factory.ts` com funções `make<Entity>()` e `make<Entity>List()`
-- **Specs** em `test/<modulo>/<modulo>-<funcionalidade>.spec.ts`
-- **Imports** usando aliases do `tsconfig.json`:
-  - `@modules/*` → `src/modules/*`
-  - `@app/*` → `src/*`
-  - `@test/*` → `test/*`
-- **DB não é necessário**: services são testados com mocks do Repository e DataSource
-- **Coverage** gerado em `coverage/` (ignorado pelo git)
 
 ---
 
-## 👥 Autores
+## 📈 Roadmap & Scalability
+- [ ] Implementação de **Background Jobs** com BullMQ para envio de mensagens WhatsApp.
+- [ ] Migração para **PostgreSQL Vector** para busca semântica em prontuários.
+- [ ] Implementação de **Soft Deletes** global em todas as entidades.
+- [ ] Suporte a **Multi-tenancy** para múltiplas clínicas.
 
-- **Caio Mijoler** — Desenvolvimento
+---
+
+## 👥 Contribuição
+1. Crie uma branch para sua feature (`git checkout -b feature/nome-da-feature`)
+2. Realize o commit seguindo o padrão **Conventional Commits**
+3. Abra um Pull Request para revisão
+
+---
+**Desenvolvido com ❤️ por Caio Mijoler**
