@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
-import { IsNull, Repository } from 'typeorm';
+import { Between, IsNull, Repository } from 'typeorm';
 import { MedicalRecordStatusEnum } from '../../../utils/enum/medical-record.enum';
 import * as crypto from 'crypto';
 import { MedicalRecord } from '../../medical-record/entities/medical-record.entity';
@@ -37,10 +37,10 @@ export class CalendarReminderService {
         where: {
           status: MedicalRecordStatusEnum.SCHEDULED,
           reminderSentAt: IsNull(),
-          // startDate: Between(
-          //   new Date(twelveHoursFromNow.getTime() - marginMs),
-          //   new Date(twelveHoursFromNow.getTime() + marginMs),
-          // ),
+          startDate: Between(
+            new Date(twelveHoursFromNow.getTime() - marginMs),
+            new Date(twelveHoursFromNow.getTime() + marginMs),
+          ),
         },
         relations: ['client', 'user'],
       });

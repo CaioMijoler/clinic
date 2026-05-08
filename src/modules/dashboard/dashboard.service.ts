@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, Not, Repository } from 'typeorm';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
@@ -17,7 +17,8 @@ export class DashboardService {
   ) {}
 
   async getStatistics(user: User, filter: DashboardFilterDto): Promise<TDashboardStatsResponse> {
-    const now = new Date();
+    try {
+      const now = new Date();
     let startDate: Date;
     let endDate: Date;
 
@@ -38,6 +39,9 @@ export class DashboardService {
     }
 
     return this.getStatsForPeriod(startDate, endDate, user.id);
+    } catch (error) {
+     throw new BadGatewayException('Erro ao retornoar dados do dashboard', error.message)
+    }
   }
 
   private async getStatsForPeriod(startDate: Date, endDate: Date, userId: number) {

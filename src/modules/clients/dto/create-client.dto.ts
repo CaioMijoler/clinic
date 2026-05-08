@@ -85,9 +85,9 @@ export class CreateClientDto {
   telephone: string;
 
   @ApiProperty({ type: () => CreateClientOrUpdateAddressDto })
-  @IsNotEmpty({ message: ErrorMessages['empty']('Endereço') })
   @IsObject({ message: ErrorMessages['object.base']('Endereço') })
   @Type(() => CreateClientOrUpdateAddressDto)
   @ValidateNested({ message: ErrorMessages['object.base']('Endereço') })
+  @IsOptional()
   clientAddress: CreateClientOrUpdateAddressDto;
 }
