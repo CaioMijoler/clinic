@@ -7,11 +7,11 @@ O **Clinic Backend** é construído sobre uma arquitetura de **Monólito Modular
 ```mermaid
 graph TD
     Client[Client Apps: Web/Mobile] --> Gateway[API Gateway / NestJS Global Guards]
-    
+
     subgraph "Core Framework (NestJS)"
         Gateway --> Auth[Auth Module]
         Gateway --> Modules[Feature Modules]
-        
+
         subgraph "Feature Modules (Bounded Contexts)"
             Modules --> Clients[Clients Module]
             Modules --> MedicalRecord[Medical Record Module]
@@ -19,7 +19,7 @@ graph TD
             MedicalRecord --> Treatment[Treatment Module]
             MedicalRecord --> Feedback[Feedback Module]
         end
-        
+
         subgraph "Shared Services"
             Config[Config Service]
             Redis[Redis Cache Service]
@@ -92,8 +92,8 @@ modules/my-module/
 ├── my-module.controller.ts  # Endpoints e roteamento
 ├── my-module.service.ts     # Lógica de negócio (Domain logic)
 ├── dto/                     # Schemas de validação (In/Out)
-│   ├── create-my-module.dto.ts
-│   └── response-my-module.dto.ts
+│   ├── create-my-module.dto.ts # RequestDto
+│   └── response-my-module.dto.ts # ResponseDto
 └── entities/                # Definição de tabelas (ORM)
     └── my-module.entity.ts
 ```

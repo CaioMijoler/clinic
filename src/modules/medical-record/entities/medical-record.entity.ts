@@ -19,6 +19,7 @@ import { MedicalRecordPathologies } from './medical-record-pathologies.entity';
 import { Question } from '../../../modules/questions/entities/question.entity';
 import { Pathology } from '../../../modules/pathologies/entities/pathology.entity';
 import { MedicalRecordDocument } from './medical-record-documents.entity';
+import { Notification } from '../../../modules/notification/entities/notification.entity';
 
 @Entity('medical_record')
 export class MedicalRecord {
@@ -162,4 +163,10 @@ export class MedicalRecord {
     (medicalRecordDocuments) => medicalRecordDocuments.medicalRecord,
   )
   medicalRecordDocuments: MedicalRecordDocument[];
+
+  @OneToMany(
+    () => Notification,
+    (notifications) => notifications.medicalRecord,
+  )
+  notifications: Notification[];
 }

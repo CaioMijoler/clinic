@@ -25,7 +25,7 @@ export class CalendarReminderService {
    * Busca consultas com startDate entre 12h ± 5min a partir de agora,
    * com status SCHEDULED e sem lembrete enviado (reminderSentAt = null).
    */
-  @Cron(CronExpression.EVERY_10_SECONDS)
+  @Cron('0 0 * * *')
   async sendReminderMessages() {
     try {
       const now = new Date();

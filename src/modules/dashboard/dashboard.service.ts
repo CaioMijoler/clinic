@@ -40,7 +40,7 @@ export class DashboardService {
 
     return this.getStatsForPeriod(startDate, endDate, user.id);
     } catch (error) {
-     throw new BadGatewayException('Erro ao retornoar dados do dashboard', error.message)
+     throw new BadGatewayException('Erro ao retornoar dados do dashboard', error.message);
     }
   }
 

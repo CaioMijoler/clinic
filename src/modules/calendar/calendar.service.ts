@@ -16,6 +16,7 @@ import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
 import { Client } from '../clients/entities/client.entity';
 import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-resume.dto';
 import * as crypto from 'crypto';
+import { NotificationService } from '../notification/notification.service';
 
 
 
@@ -26,6 +27,7 @@ export class CalendarService {
     @InjectRepository(MedicalRecord)
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
     private readonly configService: ConfigService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async create(createCalendarDto: CreateCalendarDto, user: User) {
@@ -222,6 +224,12 @@ export class CalendarService {
 
       await this.medicalRecordRepository.save(medicalRecord);
 
+      await this.notificationService.create({
+        description: `Presença confirmada por ${medicalRecord.client?.name ?? 'usuário'}`,
+        medicalRecordId: medicalRecord.id,
+        userId: medicalRecord.userId,
+      });
+
       await this.notifyProfessional(medicalRecord);
 
       return {
@@ -294,6 +302,12 @@ export class CalendarService {
       medicalRecord.status = MedicalRecordStatusEnum.CANCELED_SCHEDULE;
 
       await this.medicalRecordRepository.save(medicalRecord);
+
+      await this.notificationService.create({
+        description: `Presença cancelado por ${medicalRecord.client?.name ?? 'usuário'}`,
+        medicalRecordId: medicalRecord.id,
+        userId: medicalRecord.userId,
+      });
 
       await this.notifyProfessionalCancelation(medicalRecord);
 

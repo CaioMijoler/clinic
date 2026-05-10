@@ -65,7 +65,7 @@ export class MedicalRecordController {
     return await this.medicalRecordService.findByClient(clientId, queryParams);
   }
 
-  @Get(':id/documents')
+  @Get('documents/:id')
   @ApiOkResponse({
     type: MedicalRecordDocumentResponseDto,
     isArray: true,
