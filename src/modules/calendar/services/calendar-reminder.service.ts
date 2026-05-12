@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Between, IsNull, Repository } from 'typeorm';
@@ -88,10 +88,21 @@ export class CalendarReminderService {
 
         // Criptografia usando as chaves do ConfigService
         const algorithm = this.configService.get<string>('cripto.alg');
-        const key = Buffer.from(this.configService.get<string>('cripto.secret') || '', 'hex');
-        const iv = Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex');
+        const keyBuffer = new Uint8Array(
+          Buffer.from(
+            this.configService.get<string>('cripto.secret') || '',
+            'hex',
+          ),
+        );
+        const iv = new Uint8Array(
+          Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex'),
+        );
 
-        const cipher = crypto.createCipheriv(algorithm, key, iv);
+        const cipher = crypto.createCipheriv(
+          algorithm as any,
+          keyBuffer as any,
+          iv as any,
+        );
         let encrypted = cipher.update(dataToEncrypt, 'utf8', 'hex');
         encrypted += cipher.final('hex');
 
@@ -102,7 +113,10 @@ export class CalendarReminderService {
       }
 
       const frontendUrl = this.configService.get<string>('frontendUrl');
-      const urlSafeToken = Buffer.from(appointment.confirmationToken, 'hex').toString('base64url');
+      const urlSafeToken = Buffer.from(
+        appointment.confirmationToken,
+        'hex',
+      ).toString('base64url');
       const confirmationLink = `${frontendUrl}/confirmar-presenca/${urlSafeToken}`;
 
       // Formata o horário para exibição
@@ -124,11 +138,11 @@ export class CalendarReminderService {
 
       await this.whatsappService.sendTemplateMessage(
         {
-           whatsappToken: appointment.user.whatsAppToken,
+          whatsappToken: appointment.user.whatsAppToken,
           whatsappId: appointment.user.whatsAppId,
         },
         {
-          to: phoneWithDDI,//'5516999737133',
+          to: phoneWithDDI, //'5516999737133',
           templateName: 'lembrete_agendamento_12h',
           languageCode: 'pt_BR',
           bodyParameters: [
@@ -137,9 +151,7 @@ export class CalendarReminderService {
             appointmentTime,
             confirmationLink,
           ],
-          buttonParameters: [
-            { index: 0, text: confirmationLink },
-          ],
+          buttonParameters: [{ index: 0, text: confirmationLink }],
         },
       );
 

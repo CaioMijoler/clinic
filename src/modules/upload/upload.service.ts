@@ -17,7 +17,7 @@ export class UploadService {
     private readonly medicalRecordDocumentRepository: Repository<MedicalRecordDocument>,
   ) {}
 
-  async upload(medicalRecordId: number, files: Array<Express.Multer.File>) {
+  async upload(medicalRecordId: number, files: any[]) {
     if (!files || files.length === 0) {
       throw new BadRequestException('Nenhum arquivo enviado!');
     }
@@ -52,14 +52,17 @@ export class UploadService {
           contentType: file.mimetype,
         });
 
-        const savedDocument = await this.medicalRecordDocumentRepository.save(document);
+        const savedDocument =
+          await this.medicalRecordDocumentRepository.save(document);
 
         results.push({
           ...savedDocument,
           signedUrl: result.signedUrl,
         });
       } catch (error) {
-        throw new BadRequestException(`Erro ao fazer upload de ${file.originalname}: ${error.message}`);
+        throw new BadRequestException(
+          `Erro ao fazer upload de ${file.originalname}: ${(error as Error).message}`,
+        );
       }
     }
 
@@ -84,5 +87,26 @@ export class UploadService {
       contentType: document.contentType,
       signedUrl,
     };
+  }
+
+  async remove(medicalRecordId: number, documentId: number) {
+    const document = await this.medicalRecordDocumentRepository.findOne({
+      where: { id: documentId, medicalRecordId },
+    });
+
+    if (!document) {
+      throw new BadRequestException('Documento não encontrado!');
+    }
+
+    const bucket = this.configService.get<string>('supabase.bucket');
+
+    try {
+      await this.supabaseService.deleteFile(bucket, document.path);
+      await this.medicalRecordDocumentRepository.remove(document);
+    } catch (error) {
+      throw new BadRequestException(
+        `Erro ao remover documento: ${(error as Error).message}`,
+      );
+    }
   }
 }

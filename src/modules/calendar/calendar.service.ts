@@ -18,8 +18,6 @@ import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-re
 import * as crypto from 'crypto';
 import { NotificationService } from '../notification/notification.service';
 
-
-
 @Injectable()
 export class CalendarService {
   constructor(
@@ -191,13 +189,20 @@ export class CalendarService {
       // Validação do Token Criptografado (Modo CTR com IV fixo) via ConfigService
       try {
         const algorithm = this.configService.get<string>('cripto.alg');
-        const key = Buffer.from(this.configService.get<string>('cripto.secret') || '', 'hex');
-        const iv = Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex');
+        const keyBuffer = new Uint8Array(
+          Buffer.from(
+            this.configService.get<string>('cripto.secret') || '',
+            'hex',
+          ),
+        );
+        const iv = new Uint8Array(
+          Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex'),
+        );
 
         const decipher = crypto.createDecipheriv(
-          algorithm,
-          key,
-          iv,
+          algorithm as any,
+          keyBuffer as any,
+          iv as any,
         );
         let decrypted = decipher.update(
           medicalRecord.confirmationToken,
@@ -268,13 +273,20 @@ export class CalendarService {
       // Validação do Token Criptografado (Modo CTR com IV fixo) via ConfigService
       try {
         const algorithm = this.configService.get<string>('cripto.alg');
-        const key = Buffer.from(this.configService.get<string>('cripto.secret') || '', 'hex');
-        const iv = Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex');
+        const keyBuffer = new Uint8Array(
+          Buffer.from(
+            this.configService.get<string>('cripto.secret') || '',
+            'hex',
+          ),
+        );
+        const iv = new Uint8Array(
+          Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex'),
+        );
 
         const decipher = crypto.createDecipheriv(
-          algorithm,
-          key,
-          iv,
+          algorithm as any,
+          keyBuffer as any,
+          iv as any,
         );
         let decrypted = decipher.update(
           medicalRecord.confirmationToken,
