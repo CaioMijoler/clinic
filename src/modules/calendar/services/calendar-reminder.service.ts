@@ -74,6 +74,14 @@ export class CalendarReminderService {
    */
   private async sendReminderMessage(appointment: MedicalRecord) {
     try {
+      // Verifica se o lembrete já foi enviado
+      if (appointment.reminderSentAt) {
+        this.logger.warn(
+          `Lembrete para consulta ${appointment.id} já foi enviado em ${appointment.reminderSentAt} — pulando`,
+        );
+        return;
+      }
+
       if (!appointment.client?.telephone) {
         this.logger.warn(
           `Telefone não configurado para cliente ${appointment.clientId} — pulando lembrete para consulta ${appointment.id}`,

@@ -164,9 +164,6 @@ export class MedicalRecord {
   )
   medicalRecordDocuments: MedicalRecordDocument[];
 
-  @OneToMany(
-    () => Notification,
-    (notifications) => notifications.medicalRecord,
-  )
+  @OneToMany(() => Notification, (notifications) => notifications.medicalRecord)
   notifications: Notification[];
 }

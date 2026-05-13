@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { SupabaseService } from '../auth/supabase.service';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -8,6 +8,8 @@ import { MedicalRecordDocument } from '../medical-record/entities/medical-record
 
 @Injectable()
 export class UploadService {
+  private readonly logger = new Logger(UploadService.name);
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
@@ -78,15 +80,35 @@ export class UploadService {
       throw new BadRequestException('Documento não encontrado!');
     }
 
-    const bucket = this.configService.get<string>('supabase.bucket');
-    const signedUrl = await this.supabaseService.getFile(bucket, document.path);
+    // Validar se o path do documento é válido
+    if (!document.path || document.path.trim() === '') {
+      throw new BadRequestException('Caminho do documento inválido!');
+    }
 
-    return {
-      id: document.id,
-      name: document.name,
-      contentType: document.contentType,
-      signedUrl,
-    };
+    try {
+      const bucket = this.configService.get<string>('supabase.bucket');
+
+      if (!bucket) {
+        throw new BadRequestException('Bucket Supabase não configurado!');
+      }
+
+      const signedUrl = await this.supabaseService.getFile(
+        bucket,
+        document.path,
+      );
+
+      return {
+        id: document.id,
+        name: document.name,
+        contentType: document.contentType,
+        signedUrl,
+      };
+    } catch (error) {
+      const errorMessage = (error as Error).message;
+      throw new BadRequestException(
+        `Erro ao gerar URL assinada: ${errorMessage}`,
+      );
+    }
   }
 
   async remove(medicalRecordId: number, documentId: number) {
@@ -102,7 +124,12 @@ export class UploadService {
 
     try {
       await this.supabaseService.deleteFile(bucket, document.path);
-      await this.medicalRecordDocumentRepository.remove(document);
+      const deleteResult =
+        await this.medicalRecordDocumentRepository.delete(documentId);
+      this.logger.debug(
+        `[remove] Delete result for doc ${documentId}: affected=${deleteResult.affected}`,
+      );
+      return deleteResult;
     } catch (error) {
       throw new BadRequestException(
         `Erro ao remover documento: ${(error as Error).message}`,

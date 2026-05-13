@@ -72,17 +72,39 @@ export class SupabaseService {
   }
 
   async getFile(bucket: string, path: string, expiresIn = 60 * 60) {
+    const trimmedBucket = bucket.trim();
+    const trimmedPath = path.trim();
+
+    this.logger.debug(
+      `[getFile] Gerando signed URL para bucket="${trimmedBucket}" path="${trimmedPath}"`,
+    );
+
     const { data, error } = await this.supabase.storage
-      .from(bucket.trim())
-      .createSignedUrl(path.trim(), expiresIn);
+      .from(trimmedBucket)
+      .createSignedUrl(trimmedPath, expiresIn);
 
     if (error) {
       this.logger.error(
-        `Error creating signed URL for ${path}: ${error.message}`,
+        `[getFile] Erro ao gerar signed URL - bucket="${trimmedBucket}", path="${trimmedPath}", erro="${error.message}"`,
       );
+
+      // Se o arquivo não existe, retorna erro mais descritivo
+      if (error.message.includes('not found')) {
+        throw new Error(`Arquivo não encontrado no storage: ${trimmedPath}`);
+      }
       throw error;
     }
 
+    if (!data?.signedUrl) {
+      this.logger.error(
+        `[getFile] Falha ao gerar URL assinada (signedUrl vazio) para: ${trimmedPath}`,
+      );
+      throw new Error(`Falha ao gerar URL assinada para: ${trimmedPath}`);
+    }
+
+    this.logger.debug(
+      `[getFile] Signed URL gerada com sucesso para: ${trimmedPath}`,
+    );
     return data.signedUrl;
   }
 

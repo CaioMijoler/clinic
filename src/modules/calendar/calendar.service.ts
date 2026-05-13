@@ -235,8 +235,6 @@ export class CalendarService {
         userId: medicalRecord.userId,
       });
 
-      await this.notifyProfessional(medicalRecord);
-
       return {
         success: true,
         message: 'Presença confirmada com sucesso!',
@@ -333,20 +331,6 @@ export class CalendarService {
         error instanceof Error ? error.message : 'Erro ao cancelar consulta';
       Logger.error(message, error instanceof Error ? error.stack : '');
       throw new BadRequestException(message);
-    }
-  }
-
-  private async notifyProfessional(medicalRecord: MedicalRecord) {
-    try {
-      Logger.log(
-        `Paciente ${medicalRecord.clientId} confirmou presença na consulta ${medicalRecord.id}`,
-      );
-      // TODO: Implementar envio de notificação para o profissional via WhatsApp/Email
-    } catch (error) {
-      Logger.error(
-        'Erro ao notificar profissional',
-        error instanceof Error ? error.stack : '',
-      );
     }
   }
 
