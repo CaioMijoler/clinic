@@ -30,57 +30,73 @@ export class CalendarService {
 
   async create(createCalendarDto: CreateCalendarDto, user: User) {
     try {
-      const dataSourceResponse = await this.dataSource.transaction(
-        async (manager) => {
-          let medicalRecord = null;
+      const saved = await this.dataSource.transaction(async (manager) => {
+        const userAuth = await manager.findOne(User, {
+          where: { id: user.id },
+          select: ['id', 'name', 'whatsAppId', 'whatsAppToken'],
+        });
 
-          const userAuth = await manager.findOne(User, {
-            where: { id: user.id },
-            select: ['id', 'name', 'whatsAppId', 'whatsAppToken'],
+        if (!userAuth) {
+          throw new NotFoundException(
+            'Não conseguimos encontrar o solicitante.',
+          );
+        }
+
+        const client = await manager.findOne(Client, {
+          where: { id: createCalendarDto.clientId },
+          select: ['id', 'name'],
+        });
+
+        if (!client) {
+          throw new NotFoundException(
+            'Não conseguimos encontrar o paciente.',
+          );
+        }
+
+        if (createCalendarDto.medicalRecordId) {
+          const medicalRecord = await manager.findOne(MedicalRecord, {
+            where: { id: createCalendarDto.medicalRecordId },
           });
-
-          if (!userAuth) {
+          if (!medicalRecord) {
             throw new NotFoundException(
-              'Não conseguimos encontrar o solicitante.',
+              'Não conseguimos encontrar o prontuário.',
             );
           }
+        }
 
-          const client = await manager.findOne(Client, {
-            where: { id: createCalendarDto.clientId },
-            select: ['id', 'name'],
-          });
+        const startDate = new Date(createCalendarDto.start.dateTime);
+        const endDate = new Date(createCalendarDto.end.dateTime);
 
-          if (!client) {
-            throw new NotFoundException(
-              'Não conseguimos encontrar o paciente.',
-            );
-          }
+        const conflictingRecords = await manager
+          .createQueryBuilder(MedicalRecord, 'mr')
+          .where('mr.user_id = :userId', { userId: userAuth.id })
+          .andWhere('mr.status IN (:...statuses)', {
+            statuses: [MedicalRecordStatusEnum.SCHEDULED, MedicalRecordStatusEnum.CONFIRMED_SCHEDULE],
+          })
+          .andWhere(
+            '(mr.start_date < :endDate AND mr.end_date > :startDate)',
+            { startDate, endDate },
+          )
+          .getOne();
 
-          if (createCalendarDto.medicalRecordId) {
-            medicalRecord = await manager.findOne(MedicalRecord, {
-              where: { id: createCalendarDto.medicalRecordId },
-            });
-            if (!medicalRecord) {
-              throw new NotFoundException(
-                'Não conseguimos encontrar o prontuário.',
-              );
-            }
-          }
+        if (conflictingRecords) {
+          throw new BadRequestException(
+            'Horário indisponível. Já existe um agendamento neste horário.',
+          );
+        }
 
-          return { medicalRecord, user: userAuth, client };
-        },
-      );
+        const title = `${createCalendarDto.summary}`.trim();
 
-      const title = `${createCalendarDto.summary}`.trim();
+        const newMedicalRecord = manager.create(MedicalRecord, {
+          title,
+          startDate: createCalendarDto.start.dateTime,
+          endDate: createCalendarDto.end.dateTime,
+          status: MedicalRecordStatusEnum.SCHEDULED,
+          clientId: client.id,
+          userId: userAuth.id,
+        });
 
-      const saved = await this.medicalRecordRepository.save({
-        ...dataSourceResponse.medicalRecord,
-        title,
-        startDate: createCalendarDto.start.dateTime,
-        endDate: createCalendarDto.end.dateTime,
-        status: MedicalRecordStatusEnum.SCHEDULED,
-        clientId: dataSourceResponse.client.id,
-        userId: dataSourceResponse.user.id,
+        return await manager.save(newMedicalRecord);
       });
 
       return saved;
