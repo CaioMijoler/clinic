@@ -2,6 +2,20 @@ import { Brackets, SelectQueryBuilder } from 'typeorm';
 import { FilterDto } from './filter-dto';
 import { BadRequestException } from '@nestjs/common';
 
+export function normalizeStatusFilterValues(filterValue: string): string[] {
+  const normalized = filterValue.trim().toLowerCase();
+
+  if (normalized === 'concluded') {
+    return ['concluded', 'confirmed_schedule'];
+  }
+
+  if (normalized === 'canceled') {
+    return ['canceled', 'canceled_schedule'];
+  }
+
+  return [normalized];
+}
+
 export function paginateQuery<T>(
   queryBuilder: SelectQueryBuilder<T>,
   paginate: boolean,
@@ -75,7 +89,10 @@ const filterHandlers: {
     });
   },
   status: (queryBuilder, alias, filterValue) => {
-    const statusValues = filterValue.split(',');
+    const statusValues = filterValue
+      .split(',')
+      .flatMap((value) => normalizeStatusFilterValues(value));
+
     queryBuilder.andWhere(`${alias}.status IN (:...statusValues)`, {
       statusValues,
     });

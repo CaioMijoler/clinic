@@ -24,6 +24,31 @@ export class FilterDto implements FilterPagination {
     description: 'Filtro por campos. Ex: filter[name]=João&filter[status]=CREATED',
   })
   @IsOptional()
+  @Transform(({ value, obj }: TransformFnParams) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([key, rawValue]) => [key, String(rawValue)]),
+      );
+    }
+
+    if (!obj || typeof obj !== 'object') {
+      return undefined;
+    }
+
+    const normalizedEntries = Object.entries(obj as Record<string, unknown>).flatMap(([key, rawValue]) => {
+      if (typeof key === 'string' && key.startsWith('filter[') && key.endsWith(']')) {
+        return [[key.slice(7, -1), String(rawValue)]];
+      }
+
+      return [];
+    });
+
+    if (!normalizedEntries.length) {
+      return undefined;
+    }
+
+    return Object.fromEntries(normalizedEntries);
+  })
   filter?: Record<string, string>;
 
   @ApiProperty({ required: false })
