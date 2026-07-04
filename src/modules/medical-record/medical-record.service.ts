@@ -149,7 +149,6 @@ export class MedicalRecordService {
         'mr',
       );
 
-      console.log('data==============================================>', data);
       return data as
         | IPaginate<MedicalRecordResponseDto>
         | MedicalRecordResponseDto[];
