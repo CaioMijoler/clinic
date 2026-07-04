@@ -132,13 +132,24 @@ export class MedicalRecordService {
 
   async findAll(
     queryParams: FilterDto,
+    user: User,
   ): Promise<IPaginate<MedicalRecordResponseDto> | MedicalRecordResponseDto[]> {
     try {
+      const params: FilterDto = {
+        ...queryParams,
+        filter: {
+          ...queryParams.filter,
+          userId: String(user.id),
+        },
+      };
+
       const data = await findAllWithQueryBuilder<MedicalRecord>(
         this.medicalRecordRepository,
-        queryParams,
+        params,
         'mr',
       );
+
+      console.log('data==============================================>', data);
       return data as
         | IPaginate<MedicalRecordResponseDto>
         | MedicalRecordResponseDto[];

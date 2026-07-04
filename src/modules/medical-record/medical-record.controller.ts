@@ -48,9 +48,10 @@ export class MedicalRecordController {
     isArray: true,
   })
   async findAll(
+    @Req() req: Request,
     @Query() queryParams: FilterDto,
   ): Promise<IPaginate<MedicalRecordResponseDto> | MedicalRecordResponseDto[]> {
-    return await this.medicalRecordService.findAll(queryParams);
+    return await this.medicalRecordService.findAll(queryParams, req.user as any);
   }
 
   @Get('client/:clientId')

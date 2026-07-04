@@ -65,6 +65,16 @@ const filterHandlers: {
     relations?: string,
   ) => void;
 } = {
+  startDate_between: (queryBuilder, alias, filterValue) => {
+    const [start, end] = filterValue
+      .split(',')
+      .map((dateStr) => new Date(dateStr));
+
+    queryBuilder.andWhere(`${alias}.startDate BETWEEN :startDateStart AND :startDateEnd`, {
+      startDateStart: start,
+      startDateEnd: end,
+    });
+  },
   starts_between: (queryBuilder, alias, filterValue) => {
     const [start, end] = filterValue
       .split(',')
