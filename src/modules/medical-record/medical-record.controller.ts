@@ -10,6 +10,8 @@ import {
   Query,
   ParseIntPipe,
 } from '@nestjs/common';
+import { CalendarReminderService } from '../calendar/services/calendar-reminder.service';
+import { SendTemplateMessageDto } from '../../whatsapp/dto/send-template-message.dto';
 import { MedicalRecordService } from './medical-record.service';
 import {
   CreateMedicalRecordDto,
@@ -26,7 +28,10 @@ import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 @Controller('v1/medical-records')
 @ApiBearerAuth()
 export class MedicalRecordController {
-  constructor(private readonly medicalRecordService: MedicalRecordService) {}
+  constructor(
+    private readonly medicalRecordService: MedicalRecordService,
+    private readonly calendarReminderService: CalendarReminderService,
+  ) {}
 
   @Post()
   @ApiOkResponse({
@@ -76,6 +81,18 @@ export class MedicalRecordController {
     @Query() queryParams: FilterDto,
   ): Promise<IPaginate<MedicalRecordDocumentResponseDto> | MedicalRecordDocumentResponseDto[]> {
     return await this.medicalRecordService.findDocuments(id, queryParams);
+  }
+
+  @Get(':id/whatsapp-reminder-payload')
+  @ApiOkResponse({ description: 'Payload para envio manual de lembrete via WhatsApp' })
+  async getWhatsappReminderPayload(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: Request,
+  ): Promise<SendTemplateMessageDto> {
+    return this.calendarReminderService.getReminderPayloadForMedicalRecord(
+      id,
+      req.user.id,
+    );
   }
 
   @Get(':id')

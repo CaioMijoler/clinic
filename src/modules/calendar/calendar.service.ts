@@ -182,6 +182,54 @@ export class CalendarService {
     }
   }
 
+  async getConfirmationPreview(urlSafeToken: string) {
+    const medicalRecord =
+      await this.findMedicalRecordByUrlSafeToken(urlSafeToken);
+
+    const startDate = medicalRecord.startDate
+      ? new Date(medicalRecord.startDate)
+      : new Date(medicalRecord.updatedAt);
+
+    return {
+      attendance: {
+        appointmentId: String(medicalRecord.id),
+        patientName: medicalRecord.client?.name ?? '',
+        appointmentDate: startDate.toISOString().split('T')[0],
+        appointmentTime: startDate.toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        doctorName: medicalRecord.user?.name ?? '',
+        specialty: '',
+      },
+      status: this.getConfirmationStatus(medicalRecord.status),
+    };
+  }
+
+  async confirmAttendanceByLink(
+    urlSafeToken: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const medicalRecord =
+      await this.findMedicalRecordByUrlSafeToken(urlSafeToken);
+    const { medicalRecordId, uuid } = this.decryptConfirmationPayload(
+      medicalRecord.confirmationToken,
+    );
+
+    return this.confirmAttendance(medicalRecordId, uuid);
+  }
+
+  async cancelAttendanceByLink(
+    urlSafeToken: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const medicalRecord =
+      await this.findMedicalRecordByUrlSafeToken(urlSafeToken);
+    const { medicalRecordId, uuid } = this.decryptConfirmationPayload(
+      medicalRecord.confirmationToken,
+    );
+
+    return this.cancelAttendance(medicalRecordId, uuid);
+  }
+
   async confirmAttendance(
     medicalRecordId: string,
     token: string,
@@ -202,32 +250,9 @@ export class CalendarService {
         throw new BadRequestException('Consulta sem token de confirmação');
       }
 
-      // Validação do Token Criptografado (Modo CTR com IV fixo) via ConfigService
       try {
-        const algorithm = this.configService.get<string>('cripto.alg');
-        const keyBuffer = new Uint8Array(
-          Buffer.from(
-            this.configService.get<string>('cripto.secret') || '',
-            'hex',
-          ),
-        );
-        const iv = new Uint8Array(
-          Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex'),
-        );
-
-        const decipher = crypto.createDecipheriv(
-          algorithm as any,
-          keyBuffer as any,
-          iv as any,
-        );
-        let decrypted = decipher.update(
-          medicalRecord.confirmationToken,
-          'hex',
-          'utf8',
-        );
-        decrypted += decipher.final('utf8');
-
-        const [decryptedId, decryptedUuid] = decrypted.split('@');
+        const { medicalRecordId: decryptedId, uuid: decryptedUuid } =
+          this.decryptConfirmationPayload(medicalRecord.confirmationToken);
 
         if (decryptedId !== medicalRecordId || decryptedUuid !== token) {
           throw new Error('Token mismatch');
@@ -284,32 +309,9 @@ export class CalendarService {
         throw new BadRequestException('Consulta sem token de confirmação');
       }
 
-      // Validação do Token Criptografado (Modo CTR com IV fixo) via ConfigService
       try {
-        const algorithm = this.configService.get<string>('cripto.alg');
-        const keyBuffer = new Uint8Array(
-          Buffer.from(
-            this.configService.get<string>('cripto.secret') || '',
-            'hex',
-          ),
-        );
-        const iv = new Uint8Array(
-          Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex'),
-        );
-
-        const decipher = crypto.createDecipheriv(
-          algorithm as any,
-          keyBuffer as any,
-          iv as any,
-        );
-        let decrypted = decipher.update(
-          medicalRecord.confirmationToken,
-          'hex',
-          'utf8',
-        );
-        decrypted += decipher.final('utf8');
-
-        const [decryptedId, decryptedUuid] = decrypted.split('@');
+        const { medicalRecordId: decryptedId, uuid: decryptedUuid } =
+          this.decryptConfirmationPayload(medicalRecord.confirmationToken);
 
         if (decryptedId !== medicalRecordId || decryptedUuid !== token) {
           throw new Error('Token mismatch');
@@ -348,6 +350,83 @@ export class CalendarService {
       Logger.error(message, error instanceof Error ? error.stack : '');
       throw new BadRequestException(message);
     }
+  }
+
+  private async findMedicalRecordByUrlSafeToken(
+    urlSafeToken: string,
+  ): Promise<MedicalRecord> {
+    let encryptedHex: string;
+
+    try {
+      encryptedHex = Buffer.from(urlSafeToken, 'base64url').toString('hex');
+    } catch {
+      throw new BadRequestException('Link inválido ou expirado');
+    }
+
+    const medicalRecord = await this.medicalRecordRepository.findOne({
+      where: { confirmationToken: encryptedHex },
+      relations: ['client', 'user'],
+    });
+
+    if (!medicalRecord?.confirmationToken) {
+      throw new BadRequestException('Link inválido ou expirado');
+    }
+
+    const { medicalRecordId } = this.decryptConfirmationPayload(
+      medicalRecord.confirmationToken,
+    );
+
+    if (medicalRecordId !== String(medicalRecord.id)) {
+      throw new BadRequestException('Link inválido ou expirado');
+    }
+
+    return medicalRecord;
+  }
+
+  private decryptConfirmationPayload(encryptedHex: string): {
+    medicalRecordId: string;
+    uuid: string;
+  } {
+    const algorithm = this.configService.get<string>('cripto.alg');
+    const keyBuffer = new Uint8Array(
+      Buffer.from(this.configService.get<string>('cripto.secret') || '', 'hex'),
+    );
+    const iv = new Uint8Array(
+      Buffer.from(this.configService.get<string>('cripto.iv') || '', 'hex'),
+    );
+
+    const decipher = crypto.createDecipheriv(
+      algorithm as any,
+      keyBuffer as any,
+      iv as any,
+    );
+    let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    const [medicalRecordId, uuid] = decrypted.split('@');
+
+    if (!medicalRecordId || !uuid) {
+      throw new Error('Invalid token payload');
+    }
+
+    return { medicalRecordId, uuid };
+  }
+
+  private getConfirmationStatus(
+    status: string,
+  ): 'pending' | 'confirmed' | 'cancelled' {
+    if (status === MedicalRecordStatusEnum.CONFIRMED_SCHEDULE) {
+      return 'confirmed';
+    }
+
+    if (
+      status === MedicalRecordStatusEnum.CANCELED_SCHEDULE ||
+      status === MedicalRecordStatusEnum.CANCELED
+    ) {
+      return 'cancelled';
+    }
+
+    return 'pending';
   }
 
   private async notifyProfessionalCancelation(medicalRecord: MedicalRecord) {

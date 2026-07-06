@@ -60,6 +60,21 @@ export class CalendarController {
     return this.calendarService.remove(id, req?.user);
   }
 
+  @Get('confirmation/:urlSafeToken')
+  getConfirmationPreview(@Param('urlSafeToken') urlSafeToken: string) {
+    return this.calendarService.getConfirmationPreview(urlSafeToken);
+  }
+
+  @Post('confirmation/:urlSafeToken/confirm')
+  confirmAttendanceByLink(@Param('urlSafeToken') urlSafeToken: string) {
+    return this.calendarService.confirmAttendanceByLink(urlSafeToken);
+  }
+
+  @Post('confirmation/:urlSafeToken/cancel')
+  cancelAttendanceByLink(@Param('urlSafeToken') urlSafeToken: string) {
+    return this.calendarService.cancelAttendanceByLink(urlSafeToken);
+  }
+
   @Post(':medicalRecordId/confirm-attendance')
   async confirmAttendance(
     @Param('medicalRecordId') medicalRecordId: string,

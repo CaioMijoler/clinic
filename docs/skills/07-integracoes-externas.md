@@ -126,6 +126,7 @@ Requisição autenticada (Bearer). Credenciais `whatsAppId` e `whatsAppToken` v�
 
 ```
 POST /v1/whatsapp  → WhatsappController.create() — envio de template (credenciais do usuário logado)
+GET  /v1/medical-records/:id/whatsapp-reminder-payload → monta payload do lembrete manual
 ```
 
 ---

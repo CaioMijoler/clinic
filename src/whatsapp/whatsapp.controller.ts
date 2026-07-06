@@ -5,7 +5,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { User } from '@app/modules/user/entities/user.entity';
 
-@Controller('whatsapp')
+@Controller('v1/whatsapp')
 @ApiTags('whatsapp')
 @ApiBearerAuth()
 export class WhatsappController {

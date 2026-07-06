@@ -60,7 +60,23 @@ export class AppModule implements NestModule {
           method: RequestMethod.POST,
         },
         {
+          path: 'v1/calendar/confirmation/:urlSafeToken',
+          method: RequestMethod.GET,
+        },
+        {
+          path: 'v1/calendar/confirmation/:urlSafeToken/confirm',
+          method: RequestMethod.POST,
+        },
+        {
+          path: 'v1/calendar/confirmation/:urlSafeToken/cancel',
+          method: RequestMethod.POST,
+        },
+        {
           path: 'v1/calendar/:eventId/confirm-attendance',
+          method: RequestMethod.POST,
+        },
+        {
+          path: 'v1/calendar/:eventId/cancel-attendance',
           method: RequestMethod.POST,
         },
         {

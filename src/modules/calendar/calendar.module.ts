@@ -11,5 +11,6 @@ import { NotificationModule } from '../notification/notification.module';
   imports: [TypeOrmModule.forFeature([MedicalRecord]), WhatsappModule, NotificationModule],
   controllers: [CalendarController],
   providers: [CalendarService, CalendarReminderService],
+  exports: [CalendarReminderService],
 })
 export class CalendarModule {}
