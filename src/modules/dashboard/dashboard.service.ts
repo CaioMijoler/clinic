@@ -142,14 +142,20 @@ export class DashboardService {
     return { startDate, endDate };
   }
 
-  private getStatusFilter(status?: string) {
+  private getStatusFilter(status?: string): MedicalRecordStatusEnum[] {
     if (!status?.trim()) {
       return DEFAULT_DASHBOARD_STATUSES;
     }
 
-    return status
+    const validStatuses = new Set<string>(Object.values(MedicalRecordStatusEnum));
+
+    const parsedStatuses = status
       .split(',')
       .map((value) => value.trim())
-      .filter(Boolean);
+      .filter((value): value is MedicalRecordStatusEnum =>
+        validStatuses.has(value),
+      );
+
+    return parsedStatuses.length > 0 ? parsedStatuses : DEFAULT_DASHBOARD_STATUSES;
   }
 }

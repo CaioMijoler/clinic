@@ -4,10 +4,12 @@ import { CreatePathologyDto } from '../../../modules/pathologies/dto/create-path
 import { CreateQuestionDto } from '../../../modules/questions/dto/create-question.dto';
 import { CreateTreatmentDto } from '../../../modules/treatment/dto/create-treatment.dto';
 import { ErrorMessages } from '../../../utils/error-message';
+import { MedicalRecordStatusEnum } from '../../../utils/enum/medical-record.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDefined,
+  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
@@ -58,9 +60,12 @@ export class CreateMedicalRecordDto {
   @IsOptional()
   userId: number;
 
-  @ApiProperty()
+  @ApiProperty({ enum: MedicalRecordStatusEnum })
   @IsOptional()
-  status: string;
+  @IsEnum(MedicalRecordStatusEnum, {
+    message: ErrorMessages['string.base']('Status do prontuário'),
+  })
+  status?: MedicalRecordStatusEnum;
 
   @ApiProperty()
   @Type(() => CreateClientDto)
@@ -122,9 +127,9 @@ export class MedicalRecordResponseDto {
   @ApiProperty()
   userId: number;
 
-  @ApiProperty()
+  @ApiProperty({ enum: MedicalRecordStatusEnum })
   @IsOptional()
-  status?: string;
+  status?: MedicalRecordStatusEnum;
 
   @ApiProperty()
   client: CreateClientDto;
