@@ -6,13 +6,22 @@
 
 ```bash
 # Env vars necessárias:
-WHATSAPP_URL=https://graph.facebook.com/v17.0
-WHATSAPP_PHONE_NUMBER_ID=seu-phone-number-id
-WHATSAPP_ACCESS_TOKEN=seu-access-token
+WHATSAPP_URL=https://graph.facebook.com/v20.0
 FRONTEND_URL=https://seusistema.com   # usado nos links de confirmação
 ```
 
-> O `whatsAppId` e `whatsAppToken` também existem na tabela `users`, sugerindo possibilidade de integração por usuário.
+**Credenciais por usuário (obrigatório para envio):**
+
+| Campo | Onde configurar | Valor |
+|---|---|---|
+| `whatsAppId` | Perfil do médico no frontend (`Integrações e Tokens`) | **Phone number ID** da Meta (ex: `321542107713291`) |
+| `whatsAppToken` | Perfil do médico no frontend | Token de acesso gerado no [Meta for Developers](https://developers.facebook.com/) |
+
+> Não use o **WhatsApp Business Account ID** no lugar do **Phone number ID**. A API monta a URL como `{WHATSAPP_URL}/{whatsAppId}/messages`.
+
+**Modo de teste (Meta):** em desenvolvimento, só é possível enviar para números cadastrados em **WhatsApp → Introdução → Gerenciar lista de números de telefone**. Erro `#131030` indica destinatário fora dessa lista.
+
+**Formato do telefone:** apenas dígitos com DDI, sem `+` (ex: `5516999737133`).
 
 ### Módulo (`src/whatsapp/`)
 
@@ -32,33 +41,91 @@ await whatsappService.sendMessage({
 
 ### Envio de Template (WhatsappService.sendTemplateMessage)
 
-Para mensagens **proativas** (fora da janela de 24h) — obrigatório pela API do WhatsApp Business:
+Para mensagens **proativas** (fora da janela de 24h) — obrigatório pela API do WhatsApp Business.
+
+O template `lembrete_agendamento_12h` exige **4 parâmetros no body**. Enviar menos gera erro `#132000` (*Number of parameters does not match*).
 
 ```typescript
-await whatsappService.sendTemplateMessage({
-  to: '5516999999999',
-  templateName: 'lembrete_agendamento_12h',
-  languageCode: 'pt_BR',
-  bodyParameters: ['Nome do Paciente', 'segunda-feira, 5 de maio, 14:00', 'https://link'],
-  buttonParameters: [{ index: 0, text: 'https://link' }],
-});
+await whatsappService.sendTemplateMessage(
+  {
+    whatsappToken: user.whatsAppToken,
+    whatsappId: user.whatsAppId,
+  },
+  {
+    to: '5516999737133',
+    templateName: 'lembrete_agendamento_12h',
+    languageCode: 'pt_BR',
+    bodyParameters: [
+      'Nome do Paciente',
+      'Nome do Profissional',
+      'segunda-feira, 5 de maio, 14:00',
+      'https://link',
+    ],
+    buttonParameters: [{ index: 0, text: 'https://link' }],
+  },
+);
 // Envia type: 'template' com components de body e button
 ```
+
+### Payload de exemplo (`POST /v1/whatsapp`)
+
+Requisição autenticada (Bearer). Credenciais `whatsAppId` e `whatsAppToken` vêm do usuário logado.
+
+```json
+{
+  "to": "5516999737133",
+  "templateName": "lembrete_agendamento_12h",
+  "languageCode": "pt_BR",
+  "bodyParameters": [
+    "Nome do Paciente",
+    "Nome do Profissional",
+    "segunda-feira, 5 de maio, 14:00",
+    "https://link"
+  ],
+  "buttonParameters": [
+    {
+      "index": 0,
+      "text": "https://link"
+    }
+  ]
+}
+```
+
+| Campo | Descrição |
+|---|---|
+| `to` | Telefone do destinatário com DDI (`55` + DDD + número) |
+| `templateName` | Nome do template aprovado na Meta |
+| `languageCode` | Idioma do template (ex: `pt_BR`) |
+| `bodyParameters` | **4 strings**, na ordem das variáveis `{{1}}`…`{{4}}` do template |
+| `buttonParameters` | Parâmetros do botão de URL dinâmica (se o template tiver botão) |
+
+### Erros comuns
+
+| Código | Causa | Solução |
+|---|---|---|
+| `#131030` | Número fora da lista de permissão | Cadastrar o telefone na Meta (modo teste) ou usar número de produção |
+| `#132000` | Quantidade de parâmetros incorreta | Enviar exatamente 4 itens em `bodyParameters` para `lembrete_agendamento_12h` |
 
 ### DTOs do WhatsApp
 
 ```typescript
-// CreateWhatsappDto (para sendMessage):
+// SendTemplateMessageDto (POST /v1/whatsapp):
 {
-  to: string;    // número do destinatário (com DDI: "5516999999999")
-  body: string;  // texto da mensagem
+  to: string;
+  templateName: string;
+  languageCode?: string;
+  bodyParameters?: string[];       // 4 itens para lembrete_agendamento_12h
+  buttonParameters?: Array<{
+    index: number;
+    text: string;
+  }>;
 }
 ```
 
 ### Endpoints WhatsApp
 
 ```
-POST /whatsapp     → WhatsappController.sendMessage() — envio manual de texto
+POST /v1/whatsapp  → WhatsappController.create() — envio de template (credenciais do usuário logado)
 ```
 
 ---
@@ -87,23 +154,15 @@ AppModule
 **Nome do template:** `lembrete_agendamento_12h`
 **Idioma:** `pt_BR`
 
-```
-Olá, {{1}} 👋
-
-Este é um lembrete do seu atendimento agendado para amanhã às {{2}}.
-
-Por favor, confirme sua presença clicando no link abaixo:
-{{3}}
-
-Caso não possa comparecer, nos avise 😊
-```
-
-**Variáveis:**
+**Variáveis (4 parâmetros no body):**
 | Variável | Conteúdo | Origem |
 |---|---|---|
 | `{{1}}` | Nome do paciente | `client.name` |
-| `{{2}}` | Data/hora formatada | `medicalRecord.startDate` via `toLocaleString('pt-BR')` |
-| `{{3}}` | Link de confirmação | `${FRONTEND_URL}/confirmar-presenca/${id}/${token}` |
+| `{{2}}` | Nome do profissional | `user.name` |
+| `{{3}}` | Data/hora formatada | `medicalRecord.startDate` via `toLocaleString('pt-BR')` |
+| `{{4}}` | Link de confirmação | `${FRONTEND_URL}/confirmar-presenca/${id}/${token}` |
+
+**Botão (URL dinâmica):** parâmetro em `buttonParameters[0].text` — normalmente o sufixo ou URL usada no botão do template.
 
 ### Cron Job (CalendarReminderService)
 
