@@ -30,6 +30,9 @@ import { CreateFeedbackDto } from '../feedback/dto/create-feedback.dto';
 import { Feedback } from '../feedback/entities/feedback.entity';
 import { MedicalRecordDocument } from './entities/medical-record-documents.entity';
 import { MedicalRecordDocumentResponseDto } from './dto/medical-record-documents/medical-record-documents-response.dto';
+import { MedicalRecordService as MedicalRecordServiceEntity } from './entities/medical-record-service.entity';
+import { CreateMedicalRecordServiceItemDto } from './dto/medical-record-services/create-medical-record-service.dto';
+import { Service } from '../services/entities/service.entity';
 
 @Injectable()
 export class MedicalRecordService {
@@ -52,6 +55,7 @@ export class MedicalRecordService {
         treatments,
         medicalRecordQuestions,
         feedbacks,
+        services,
         ...medicalRecordData
       } = createMedicalRecordDto;
 
@@ -99,9 +103,19 @@ export class MedicalRecordService {
             medicalData,
             'create',
           );
+          const medicalRecordServicesResult =
+            services !== undefined
+              ? await this.createOrUpdateMedicalRecordServices(
+                  manager,
+                  services,
+                  medicalData,
+                  auth.id,
+                )
+              : { services: [], totalValue: null };
 
           return {
             ...medicalData,
+            totalValue: medicalRecordServicesResult.totalValue ?? medicalData.totalValue ?? null,
             client: newClient
               ? {
                   ...newClient,
@@ -112,6 +126,7 @@ export class MedicalRecordService {
             treatments: newTreatments,
             medicalRecordQuestions: newQuestions,
             feedbacks: newFeedbacks,
+            medicalRecordServices: medicalRecordServicesResult.services,
           };
         },
       );
@@ -220,6 +235,8 @@ export class MedicalRecordService {
         'pathologies',
         'questions',
         'treatments',
+        'medicalRecordServices',
+        'medicalRecordServices.service',
       ],
     });
 
@@ -238,6 +255,7 @@ export class MedicalRecordService {
         treatments,
         medicalRecordQuestions,
         feedbacks,
+        services,
         ...medicalRecordData
       } = updateMedicalRecordDto;
       const medicalRecord = await this.medicalRecordRepository.findOne({
@@ -250,6 +268,8 @@ export class MedicalRecordService {
           'feedbacks',
           'client',
           'treatments',
+          'medicalRecordServices',
+          'medicalRecordServices.service',
         ],
       });
       if (!medicalRecord) {
@@ -276,6 +296,7 @@ export class MedicalRecordService {
           let newTreatments = medicalRecord?.treatments ?? [];
           let newQuestions = medicalRecord?.medicalRecordQuestions ?? [];
           let newFeedbacks = medicalRecord?.feedbacks ?? [];
+          let newMedicalRecordServices = medicalRecord?.medicalRecordServices ?? [];
 
           newPathologies = await this.createOrUpdatePathologies(
             manager,
@@ -302,6 +323,18 @@ export class MedicalRecordService {
             'create',
           );
 
+          if (services !== undefined) {
+            const medicalRecordServicesResult =
+              await this.createOrUpdateMedicalRecordServices(
+                manager,
+                services,
+                medicalData,
+                auth.id,
+              );
+            newMedicalRecordServices = medicalRecordServicesResult.services;
+            medicalData.totalValue = medicalRecordServicesResult.totalValue;
+          }
+
           return {
             ...medicalData,
             client: newClient,
@@ -309,6 +342,7 @@ export class MedicalRecordService {
             treatments: newTreatments,
             medicalRecordQuestions: newQuestions,
             feedbacks: newFeedbacks,
+            medicalRecordServices: newMedicalRecordServices,
           };
         },
       );
@@ -585,5 +619,85 @@ export class MedicalRecordService {
     }
 
     return newFeedbacks;
+  }
+
+  async createOrUpdateMedicalRecordServices(
+    manager: EntityManager,
+    servicesDto: CreateMedicalRecordServiceItemDto[],
+    medicalRecord: MedicalRecord,
+    userId: number,
+  ): Promise<{
+    services: MedicalRecordServiceEntity[];
+    totalValue: number | null;
+  }> {
+    const existingServices = await manager.find(MedicalRecordServiceEntity, {
+      where: { medicalRecordId: medicalRecord.id },
+    });
+
+    for (const existingService of existingServices) {
+      await manager.remove(MedicalRecordServiceEntity, existingService);
+    }
+
+    if (!servicesDto?.length) {
+      await manager.update(MedicalRecord, medicalRecord.id, { totalValue: null });
+      return { services: [], totalValue: null };
+    }
+
+    const serviceIds = [...new Set(servicesDto.map((item) => item.serviceId))];
+    const catalogServices = await manager.find(Service, {
+      where: serviceIds.map((id) => ({ id, userId })),
+    });
+
+    if (catalogServices.length !== serviceIds.length) {
+      throw new BadRequestException(
+        'Não conseguimos encontrar um dos serviços selecionados.',
+      );
+    }
+
+    const serviceById = new Map(
+      catalogServices.map((service) => [service.id, service]),
+    );
+
+    for (const item of servicesDto) {
+      const service = serviceById.get(item.serviceId);
+
+      if (!service?.active) {
+        throw new BadRequestException(
+          `O serviço "${service?.name ?? item.serviceId}" está inativo.`,
+        );
+      }
+    }
+
+    const savedServices: MedicalRecordServiceEntity[] = [];
+
+    for (const item of servicesDto) {
+      const savedService = await manager.save(
+        MedicalRecordServiceEntity,
+        manager.create(MedicalRecordServiceEntity, {
+          medicalRecordId: medicalRecord.id,
+          serviceId: item.serviceId,
+          durationMinutes: item.durationMinutes,
+          totalValue: item.courtesy ? 0 : item.totalValue,
+          courtesy: item.courtesy ?? false,
+          discount: item.discount ?? 0,
+        }),
+      );
+
+      savedServices.push(savedService);
+    }
+
+    const totalValue = servicesDto.reduce(
+      (sum, item) => sum + (item.courtesy ? 0 : Number(item.totalValue) || 0),
+      0,
+    );
+
+    await manager.update(MedicalRecord, medicalRecord.id, { totalValue });
+
+    const servicesWithRelations = await manager.find(MedicalRecordServiceEntity, {
+      where: { medicalRecordId: medicalRecord.id },
+      relations: ['service'],
+    });
+
+    return { services: servicesWithRelations, totalValue };
   }
 }

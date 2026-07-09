@@ -60,6 +60,36 @@ export class CalendarController {
     return this.calendarService.remove(id, req?.user);
   }
 
+  @Post(':id/confirm-presence')
+  @ApiBearerAuth()
+  confirmPresenceByProfessional(@Req() req: Request, @Param('id') id: string) {
+    return this.calendarService.confirmPresenceByProfessional(id, req?.user);
+  }
+
+  @Post(':id/notify-professional/confirm')
+  @ApiBearerAuth()
+  notifyProfessionalAppointmentConfirmed(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ) {
+    return this.calendarReminderService.notifyProfessionalAppointmentConfirmed(
+      Number(id),
+      req.user.id,
+    );
+  }
+
+  @Post(':id/notify-professional/cancel')
+  @ApiBearerAuth()
+  notifyProfessionalAppointmentCanceled(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ) {
+    return this.calendarReminderService.notifyProfessionalAppointmentCanceled(
+      Number(id),
+      req.user.id,
+    );
+  }
+
   @Get('confirmation/:urlSafeToken')
   getConfirmationPreview(@Param('urlSafeToken') urlSafeToken: string) {
     return this.calendarService.getConfirmationPreview(urlSafeToken);

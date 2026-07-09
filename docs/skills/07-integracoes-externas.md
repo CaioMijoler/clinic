@@ -127,7 +127,11 @@ Requisição autenticada (Bearer). Credenciais `whatsAppId` e `whatsAppToken` v�
 ```
 POST /v1/whatsapp  → WhatsappController.create() — envio de template (credenciais do usuário logado)
 GET  /v1/medical-records/:id/whatsapp-reminder-payload → monta payload do lembrete manual
+POST /v1/calendar/:id/notify-professional/confirm → notifica profissional (confirmar_agendamento)
+POST /v1/calendar/:id/notify-professional/cancel  → notifica profissional (cancelar_agendamento)
 ```
+
+> Modelos completos (texto, parâmetros e exemplos): [`docs/whatsapp-modelos.md`](../whatsapp-modelos.md)
 
 ---
 
@@ -152,7 +156,9 @@ AppModule
 
 ### Template de Mensagem (WhatsApp Business)
 
-**Nome do template:** `lembrete_agendamento_12h`
+**Nome do template:** `lembrete_agendamento_12h`  
+**Objetivo:** lembrar o paciente da consulta e orientá-lo a **confirmar ou cancelar** o agendamento pelo link.
+
 **Idioma:** `pt_BR`
 
 **Variáveis (4 parâmetros no body):**
@@ -161,7 +167,7 @@ AppModule
 | `{{1}}` | Nome do paciente | `client.name` |
 | `{{2}}` | Nome do profissional | `user.name` |
 | `{{3}}` | Data/hora formatada | `medicalRecord.startDate` via `toLocaleString('pt-BR')` |
-| `{{4}}` | Link de confirmação | `${FRONTEND_URL}/confirmar-presenca/${id}/${token}` |
+| `{{4}}` | Link para confirmar ou cancelar | `${FRONTEND_URL}/confirmar-presenca/${token}` |
 
 **Botão (URL dinâmica):** parâmetro em `buttonParameters[0].text` — normalmente o sufixo ou URL usada no botão do template.
 

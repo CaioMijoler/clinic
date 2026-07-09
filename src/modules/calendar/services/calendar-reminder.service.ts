@@ -16,6 +16,8 @@ import { SendTemplateMessageDto } from '../../../whatsapp/dto/send-template-mess
 import { v4 as uuidv4 } from 'uuid';
 
 export const WHATSAPP_REMINDER_TEMPLATE = 'lembrete_agendamento_12h';
+export const WHATSAPP_PROFESSIONAL_CONFIRM_TEMPLATE = 'confirmar_agendamento';
+export const WHATSAPP_PROFESSIONAL_CANCEL_TEMPLATE = 'cancelar_agendamento';
 
 @Injectable()
 export class CalendarReminderService {
@@ -27,6 +29,61 @@ export class CalendarReminderService {
     private readonly whatsappService: WhatsappService,
     private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * Envia mensagem de confirmação ao paciente logo após o agendamento.
+   * Falhas no WhatsApp são apenas logadas — não interrompem o cadastro.
+   */
+  async sendCreationConfirmation(medicalRecordId: number): Promise<void> {
+    try {
+      const appointment = await this.medicalRecordRepository.findOne({
+        where: { id: medicalRecordId },
+        relations: ['client', 'user'],
+      });
+
+      if (!appointment) {
+        this.logger.warn(
+          `Agendamento ${medicalRecordId} não encontrado para envio de confirmação`,
+        );
+        return;
+      }
+
+      if (!appointment.client?.telephone?.trim()) {
+        this.logger.warn(
+          `Telefone não configurado para cliente ${appointment.clientId} — pulando confirmação do agendamento ${appointment.id}`,
+        );
+        return;
+      }
+
+      if (!appointment.user?.whatsAppToken || !appointment.user?.whatsAppId) {
+        this.logger.warn(
+          `Credenciais WhatsApp não configuradas para usuário ${appointment.userId} — pulando confirmação do agendamento ${appointment.id}`,
+        );
+        return;
+      }
+
+      await this.ensureConfirmationToken(appointment);
+
+      const payload = this.buildReminderTemplatePayload(appointment);
+
+      await this.whatsappService.sendTemplateMessage(
+        {
+          whatsappToken: appointment.user.whatsAppToken,
+          whatsappId: appointment.user.whatsAppId,
+        },
+        payload,
+      );
+
+      this.logger.log(
+        `Confirmação de agendamento enviada para ${appointment.client.name} (${payload.to}) — Consulta #${appointment.id}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Erro ao enviar confirmação de agendamento ${medicalRecordId}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        error instanceof Error ? error.stack : '',
+      );
+    }
+  }
 
   /**
    * Cron que roda a cada 5 minutos para enviar lembretes de agendamento.
@@ -42,7 +99,7 @@ export class CalendarReminderService {
 
       const appointments = await this.medicalRecordRepository.find({
         where: {
-          status: MedicalRecordStatusEnum.SCHEDULED,
+          status: MedicalRecordStatusEnum.CREATED,
           reminderSentAt: IsNull(),
           startDate: Between(
             new Date(twelveHoursFromNow.getTime() - marginMs),
@@ -95,6 +152,126 @@ export class CalendarReminderService {
     await this.ensureConfirmationToken(appointment);
 
     return this.buildReminderTemplatePayload(appointment);
+  }
+
+  async notifyProfessionalAppointmentConfirmed(
+    medicalRecordId: number,
+    userId: number,
+  ): Promise<{ success: boolean; message: string }> {
+    const appointment = await this.findAppointmentForProfessionalNotification(
+      medicalRecordId,
+      userId,
+    );
+
+    return this.sendProfessionalNotification(
+      appointment,
+      WHATSAPP_PROFESSIONAL_CONFIRM_TEMPLATE,
+      'Confirmação de agendamento enviada ao profissional',
+    );
+  }
+
+  async notifyProfessionalAppointmentCanceled(
+    medicalRecordId: number,
+    userId: number,
+  ): Promise<{ success: boolean; message: string }> {
+    const appointment = await this.findAppointmentForProfessionalNotification(
+      medicalRecordId,
+      userId,
+    );
+
+    return this.sendProfessionalNotification(
+      appointment,
+      WHATSAPP_PROFESSIONAL_CANCEL_TEMPLATE,
+      'Cancelamento de agendamento enviado ao profissional',
+    );
+  }
+
+  /**
+   * Envia notificação ao profissional sem interromper o fluxo principal.
+   */
+  async sendProfessionalAppointmentCanceledSilently(
+    medicalRecordId: number,
+  ): Promise<void> {
+    await this.trySendProfessionalNotificationSilently(
+      medicalRecordId,
+      WHATSAPP_PROFESSIONAL_CANCEL_TEMPLATE,
+      'Cancelamento de agendamento enviado ao profissional',
+    );
+  }
+
+  /**
+   * Envia notificação de confirmação ao profissional sem interromper o fluxo principal.
+   */
+  async sendProfessionalAppointmentConfirmedSilently(
+    medicalRecordId: number,
+  ): Promise<void> {
+    await this.trySendProfessionalNotificationSilently(
+      medicalRecordId,
+      WHATSAPP_PROFESSIONAL_CONFIRM_TEMPLATE,
+      'Confirmação de agendamento enviada ao profissional',
+    );
+  }
+
+  private async trySendProfessionalNotificationSilently(
+    medicalRecordId: number,
+    templateName: string,
+    successMessage: string,
+  ): Promise<void> {
+    try {
+      const appointment = await this.medicalRecordRepository.findOne({
+        where: { id: medicalRecordId },
+        relations: ['client', 'user'],
+      });
+
+      if (!appointment) {
+        this.logger.warn(
+          `WhatsApp ${templateName}: prontuário ${medicalRecordId} não encontrado — notificação ignorada`,
+        );
+        return;
+      }
+
+      const skipReason = this.getProfessionalNotificationSkipReason(appointment);
+
+      if (skipReason) {
+        this.logger.warn(
+          `WhatsApp ${templateName}: consulta #${medicalRecordId} — ${skipReason}`,
+        );
+        return;
+      }
+
+      await this.sendProfessionalNotification(
+        appointment,
+        templateName,
+        successMessage,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Erro ao enviar WhatsApp ${templateName} para consulta ${medicalRecordId}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        error instanceof Error ? error.stack : '',
+      );
+    }
+  }
+
+  private getProfessionalNotificationSkipReason(
+    appointment: MedicalRecord,
+  ): string | null {
+    if (!appointment.user?.telephone?.trim()) {
+      return 'profissional sem telefone cadastrado';
+    }
+
+    if (!appointment.user?.whatsAppToken || !appointment.user?.whatsAppId) {
+      return 'credenciais WhatsApp não configuradas';
+    }
+
+    if (!appointment.client?.name?.trim()) {
+      return 'paciente sem nome cadastrado';
+    }
+
+    if (!appointment.user?.name?.trim()) {
+      return 'profissional sem nome cadastrado';
+    }
+
+    return null;
   }
 
   /**
@@ -177,6 +354,7 @@ export class CalendarReminderService {
   private buildReminderTemplatePayload(
     appointment: MedicalRecord,
   ): SendTemplateMessageDto {
+    // Template lembrete_agendamento_12h: orienta o paciente a confirmar ou cancelar pelo link ({{4}}).
     const frontendUrl = this.configService.get<string>('frontendUrl');
     const urlSafeToken = Buffer.from(
       appointment.confirmationToken,
@@ -184,23 +362,12 @@ export class CalendarReminderService {
     ).toString('base64url');
     const confirmationLink = `${frontendUrl}/confirmar-presenca/${urlSafeToken}`;
 
-    const appointmentDate = appointment.startDate
-      ? new Date(appointment.startDate)
-      : new Date(appointment.updatedAt);
+    const appointmentTime = this.formatAppointmentDateTime(appointment);
 
-    const appointmentTime = appointmentDate.toLocaleString('pt-BR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
-    const phone = appointment.client.telephone.replace(/\D/g, '');
-    const phoneWithDDI = phone.length <= 11 ? `55${phone}` : phone;
+    const phone = this.formatPhoneWithDDI(appointment.client.telephone);
 
     return {
-      to: phoneWithDDI,
+      to: phone,
       templateName: WHATSAPP_REMINDER_TEMPLATE,
       languageCode: 'pt_BR',
       bodyParameters: [
@@ -211,5 +378,151 @@ export class CalendarReminderService {
       ],
       buttonParameters: [{ index: 0, text: confirmationLink }],
     };
+  }
+
+  private async findAppointmentForProfessionalNotification(
+    medicalRecordId: number,
+    userId: number,
+  ): Promise<MedicalRecord> {
+    const appointment = await this.medicalRecordRepository.findOne({
+      where: { id: medicalRecordId, userId },
+      relations: ['client', 'user'],
+    });
+
+    if (!appointment) {
+      throw new NotFoundException('Prontuário não encontrado');
+    }
+
+    return appointment;
+  }
+
+  private async sendProfessionalNotification(
+    appointment: MedicalRecord,
+    templateName: string,
+    successMessage: string,
+  ): Promise<{ success: boolean; message: string }> {
+    if (!appointment.user?.telephone?.trim()) {
+      throw new BadRequestException(
+        'Profissional não possui telefone cadastrado para envio de WhatsApp',
+      );
+    }
+
+    if (!appointment.user?.whatsAppToken || !appointment.user?.whatsAppId) {
+      throw new BadRequestException(
+        'Credenciais WhatsApp não configuradas para o profissional',
+      );
+    }
+
+    if (!appointment.client?.name?.trim()) {
+      throw new BadRequestException(
+        'Paciente não possui nome cadastrado para a notificação',
+      );
+    }
+
+    if (!appointment.user?.name?.trim()) {
+      throw new BadRequestException(
+        'Profissional não possui nome cadastrado para a notificação',
+      );
+    }
+
+    const payload = this.buildProfessionalNotificationPayload(
+      appointment,
+      templateName,
+    );
+
+    await this.whatsappService.sendTemplateMessage(
+      {
+        whatsappToken: appointment.user.whatsAppToken,
+        whatsappId: appointment.user.whatsAppId,
+      },
+      payload,
+    );
+
+    this.logger.log(
+      `${successMessage} — ${appointment.user.name} (${payload.to}) — Consulta #${appointment.id}`,
+    );
+
+    return {
+      success: true,
+      message: successMessage,
+    };
+  }
+
+  private buildProfessionalNotificationPayload(
+    appointment: MedicalRecord,
+    templateName: string,
+  ): SendTemplateMessageDto {
+    return {
+      to: this.formatPhoneWithDDI(appointment.user.telephone),
+      templateName,
+      languageCode: 'pt_BR',
+      bodyParameters: [
+        appointment.user.name,
+        appointment.client.name,
+        this.formatProfessionalAppointmentDate(appointment),
+        this.formatProfessionalAppointmentTimeRange(appointment),
+      ],
+    };
+  }
+
+  private formatProfessionalAppointmentTimeRange(
+    appointment: MedicalRecord,
+  ): string {
+    const startDate = appointment.startDate
+      ? new Date(appointment.startDate)
+      : new Date(appointment.updatedAt);
+
+    const endDate = appointment.endDate
+      ? new Date(appointment.endDate)
+      : startDate;
+
+    const startTime = startDate.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'America/Sao_Paulo',
+    });
+
+    const endTime = endDate.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'America/Sao_Paulo',
+    });
+
+    const endTimeCompact = endTime.replace(':', 'h');
+
+    return `${startTime} às ${endTimeCompact}`;
+  }
+
+  private formatProfessionalAppointmentDate(appointment: MedicalRecord): string {
+    const appointmentDate = appointment.startDate
+      ? new Date(appointment.startDate)
+      : new Date(appointment.updatedAt);
+
+    return appointmentDate.toLocaleDateString('pt-BR', {
+      day: 'numeric',
+      month: 'long',
+      timeZone: 'America/Sao_Paulo',
+    });
+  }
+
+  private formatAppointmentDateTime(appointment: MedicalRecord): string {
+    const appointmentDate = appointment.startDate
+      ? new Date(appointment.startDate)
+      : new Date(appointment.updatedAt);
+
+    return appointmentDate.toLocaleString('pt-BR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  private formatPhoneWithDDI(phone: string): string {
+    const digits = phone.replace(/\D/g, '');
+    return digits.length <= 11 ? `55${digits}` : digits;
   }
 }

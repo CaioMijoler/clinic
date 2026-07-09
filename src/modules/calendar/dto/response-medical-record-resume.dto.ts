@@ -35,4 +35,7 @@ export class ResponseMedicalRecordResumeDto {
 
   @ApiPropertyOptional({ type: MedicalRecordResumeDto })
   medicalRecord?: MedicalRecordResumeDto;
+
+  @ApiPropertyOptional()
+  status?: string;
 }

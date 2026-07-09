@@ -25,6 +25,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { CacheModule } from './cache/cache.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { ServicesModule } from './modules/services/services.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     CacheModule,
     UploadModule,
     NotificationModule,
+    ServicesModule,
   ],
 })
 export class AppModule implements NestModule {

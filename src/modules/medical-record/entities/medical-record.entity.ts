@@ -20,6 +20,7 @@ import { Question } from '../../../modules/questions/entities/question.entity';
 import { Pathology } from '../../../modules/pathologies/entities/pathology.entity';
 import { MedicalRecordDocument } from './medical-record-documents.entity';
 import { Notification } from '../../../modules/notification/entities/notification.entity';
+import { MedicalRecordService } from './medical-record-service.entity';
 
 @Entity('medical_record')
 export class MedicalRecord {
@@ -85,6 +86,15 @@ export class MedicalRecord {
   status: string;
 
   @Column({
+    name: 'total_value',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  totalValue: number | null;
+
+  @Column({
     name: 'confirmation_token',
     type: 'varchar',
     length: 255,
@@ -123,6 +133,12 @@ export class MedicalRecord {
   @ManyToOne(() => Client)
   @JoinColumn({ name: 'client_id' })
   client: Client;
+
+  @OneToMany(
+    () => MedicalRecordService,
+    (medicalRecordServices) => medicalRecordServices.medicalRecord,
+  )
+  medicalRecordServices: MedicalRecordService[];
 
   @OneToMany(() => Feedback, (feedbacks) => feedbacks.medicalRecord)
   feedbacks: Feedback[];

@@ -8,6 +8,7 @@ import { MedicalRecordStatusEnum } from '../../../utils/enum/medical-record.enum
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsDefined,
   IsEnum,
   IsNumber,
@@ -19,6 +20,7 @@ import {
 } from 'class-validator';
 import { CreateMedicalRecordPathologyDto } from './medical-record-pathologies/create-medical-record-pathologies.dto';
 import { CreateMedicalRecordQuestionsDto } from './medical-record-questions/create-medical-record-questions.dto';
+import { CreateMedicalRecordServiceItemDto } from './medical-record-services/create-medical-record-service.dto';
 
 export class CreateMedicalRecordDto {
   @ApiProperty()
@@ -103,6 +105,18 @@ export class CreateMedicalRecordDto {
   @IsDefined({ message: ErrorMessages['empty']('Feedbacks do prontuário') })
   @ValidateNested()
   feedbacks?: CreateFeedbackDto[];
+
+  @ApiProperty({ type: CreateMedicalRecordServiceItemDto, isArray: true, required: false })
+  @Type(() => CreateMedicalRecordServiceItemDto)
+  @IsOptional()
+  @IsArray({ message: ErrorMessages['array.base']('Serviços do prontuário') })
+  @ValidateNested({ each: true })
+  services?: CreateMedicalRecordServiceItemDto[];
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsNumber({}, { message: ErrorMessages['number.base']('Valor total do prontuário') })
+  totalValue?: number | null;
 }
 
 export class MedicalRecordResponseDto {
@@ -152,6 +166,12 @@ export class MedicalRecordResponseDto {
   @ApiProperty({ type: CreateFeedbackDto, isArray: true })
   @IsOptional()
   feedbacks?: CreateFeedbackDto[];
+
+  @ApiProperty({ type: CreateMedicalRecordServiceItemDto, isArray: true, required: false })
+  medicalRecordServices?: CreateMedicalRecordServiceItemDto[];
+
+  @ApiProperty({ required: false, nullable: true })
+  totalValue?: number | null;
 
   @ApiProperty()
   createdAt: string;
