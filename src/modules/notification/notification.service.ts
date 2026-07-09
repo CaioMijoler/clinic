@@ -68,7 +68,7 @@ export class NotificationService {
 
     const result = await this.notificationRepository.delete({
       userId,
-      createdAt: LessThan(cutoffDate),
+      createdAt: LessThan(cutoffDate.toISOString()),
     });
 
     return { deleted: result.affected ?? 0 };
