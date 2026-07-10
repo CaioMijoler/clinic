@@ -178,4 +178,19 @@ export class MedicalRecordResponseDto {
 
   @ApiProperty()
   updatedAt: string;
+
+  @ApiProperty({ required: false })
+  latestAppointmentId?: number;
+
+  @ApiProperty({ required: false })
+  latestAppointmentStatus?: string;
+
+  @ApiProperty({ required: false, description: 'Soma das sessões dos serviços do prontuário' })
+  totalSessions?: number;
+
+  @ApiProperty({
+    required: false,
+    description: 'Quantidade de sessões já realizadas (agendamentos com comparecimento)',
+  })
+  completedSessions?: number;
 }

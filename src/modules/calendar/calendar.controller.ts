@@ -15,6 +15,7 @@ import { Request } from 'express';
 import { CreateCalendarDto } from './dto/create-calendar.dto';
 import { ConfirmAttendanceDto } from './dto/confirm-attendance.dto';
 import { CancelAttendanceDto } from './dto/cancel-attendance.dto';
+import { MarkAttendanceDto } from './dto/mark-attendance.dto';
 import { FilterCalendarDto } from './dto/filter-calendar.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-resume.dto';
@@ -66,6 +67,16 @@ export class CalendarController {
     return this.calendarService.confirmPresenceByProfessional(id, req?.user);
   }
 
+  @Post(':id/mark-attendance')
+  @ApiBearerAuth()
+  markAttendance(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() body: MarkAttendanceDto,
+  ) {
+    return this.calendarService.markAttendance(id, body.attended, req?.user);
+  }
+
   @Post(':id/notify-professional/confirm')
   @ApiBearerAuth()
   notifyProfessionalAppointmentConfirmed(
@@ -105,19 +116,19 @@ export class CalendarController {
     return this.calendarService.cancelAttendanceByLink(urlSafeToken);
   }
 
-  @Post(':medicalRecordId/confirm-attendance')
+  @Post(':appointmentId/confirm-attendance')
   async confirmAttendance(
-    @Param('medicalRecordId') medicalRecordId: string,
+    @Param('appointmentId') appointmentId: string,
     @Body() confirmDto: ConfirmAttendanceDto,
   ) {
-    return this.calendarService.confirmAttendance(medicalRecordId, confirmDto.token);
+    return this.calendarService.confirmAttendance(appointmentId, confirmDto.token);
   }
 
-  @Post(':medicalRecordId/cancel-attendance')
+  @Post(':appointmentId/cancel-attendance')
   async cancelAttendance(
-    @Param('medicalRecordId') medicalRecordId: string,
+    @Param('appointmentId') appointmentId: string,
     @Body() cancelDto: CancelAttendanceDto,
   ) {
-    return this.calendarService.cancelAttendance(medicalRecordId, cancelDto.token);
+    return this.calendarService.cancelAttendance(appointmentId, cancelDto.token);
   }
 }

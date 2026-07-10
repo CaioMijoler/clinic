@@ -32,4 +32,10 @@ export class CreateMedicalRecordServiceItemDto {
   @IsNumber({}, { message: ErrorMessages['number.base']('Desconto') })
   @Min(0, { message: 'O desconto não pode ser negativo.' })
   discount?: number;
+
+  @ApiPropertyOptional({ default: 1, description: 'Quantidade de sessões deste serviço' })
+  @IsOptional()
+  @IsNumber({}, { message: ErrorMessages['number.base']('Quantidade de sessões') })
+  @Min(1, { message: 'A quantidade de sessões deve ser de pelo menos 1.' })
+  quantitySessions?: number;
 }

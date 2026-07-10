@@ -51,6 +51,12 @@ export class CreateCalendarServiceItemDto {
   @IsNumber({}, { message: ErrorMessages['number.base']('Desconto') })
   @Min(0, { message: 'O desconto não pode ser negativo.' })
   discount?: number;
+
+  @ApiProperty({ required: false, default: 1, description: 'Quantidade de sessões deste serviço' })
+  @IsOptional()
+  @IsNumber({}, { message: ErrorMessages['number.base']('Quantidade de sessões') })
+  @Min(1, { message: 'A quantidade de sessões deve ser de pelo menos 1.' })
+  quantitySessions?: number;
 }
 
 export class CreateCalendarDto {
@@ -117,4 +123,5 @@ export class CreateCalendarDto {
   @IsNumber({}, { message: ErrorMessages['number.base']('Valor total do prontuário') })
   @Min(0, { message: 'O valor total do prontuário não pode ser negativo.' })
   totalValue?: number | null;
+
 }

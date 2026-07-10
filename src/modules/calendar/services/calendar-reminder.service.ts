@@ -7,10 +7,10 @@ import {
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
-import { Between, IsNull, Repository } from 'typeorm';
-import { MedicalRecordStatusEnum } from '../../../utils/enum/medical-record.enum';
+import { Between, In, IsNull, Not, Repository } from 'typeorm';
+import { AppointmentStatusEnum } from '../../../utils/enum/appointment-status.enum';
 import * as crypto from 'crypto';
-import { MedicalRecord } from '../../medical-record/entities/medical-record.entity';
+import { Appointment } from '../../appointments/entities/appointment.entity';
 import { WhatsappService } from '../../../whatsapp/whatsapp.service';
 import { SendTemplateMessageDto } from '../../../whatsapp/dto/send-template-message.dto';
 import { v4 as uuidv4 } from 'uuid';
@@ -24,40 +24,33 @@ export class CalendarReminderService {
   private readonly logger = new Logger(CalendarReminderService.name);
 
   constructor(
-    @InjectRepository(MedicalRecord)
-    private readonly medicalRecordRepository: Repository<MedicalRecord>,
+    @InjectRepository(Appointment)
+    private readonly appointmentRepository: Repository<Appointment>,
     private readonly whatsappService: WhatsappService,
     private readonly configService: ConfigService,
   ) {}
 
-  /**
-   * Envia mensagem de confirmação ao paciente logo após o agendamento.
-   * Falhas no WhatsApp são apenas logadas — não interrompem o cadastro.
-   */
-  async sendCreationConfirmation(medicalRecordId: number): Promise<void> {
+  async sendCreationConfirmation(appointmentId: number): Promise<void> {
     try {
-      const appointment = await this.medicalRecordRepository.findOne({
-        where: { id: medicalRecordId },
-        relations: ['client', 'user'],
-      });
+      const appointment = await this.findAppointmentWithRelations(appointmentId);
 
       if (!appointment) {
         this.logger.warn(
-          `Agendamento ${medicalRecordId} não encontrado para envio de confirmação`,
+          `Agendamento ${appointmentId} não encontrado para envio de confirmação`,
         );
         return;
       }
 
-      if (!appointment.client?.telephone?.trim()) {
+      if (!appointment.medicalRecord?.client?.telephone?.trim()) {
         this.logger.warn(
-          `Telefone não configurado para cliente ${appointment.clientId} — pulando confirmação do agendamento ${appointment.id}`,
+          `Telefone não configurado para cliente — pulando confirmação do agendamento ${appointment.id}`,
         );
         return;
       }
 
       if (!appointment.user?.whatsAppToken || !appointment.user?.whatsAppId) {
         this.logger.warn(
-          `Credenciais WhatsApp não configuradas para usuário ${appointment.userId} — pulando confirmação do agendamento ${appointment.id}`,
+          `Credenciais WhatsApp não configuradas — pulando confirmação do agendamento ${appointment.id}`,
         );
         return;
       }
@@ -75,21 +68,16 @@ export class CalendarReminderService {
       );
 
       this.logger.log(
-        `Confirmação de agendamento enviada para ${appointment.client.name} (${payload.to}) — Consulta #${appointment.id}`,
+        `Confirmação de agendamento enviada para ${appointment.medicalRecord.client.name} (${payload.to}) — Consulta #${appointment.id}`,
       );
     } catch (error) {
       this.logger.error(
-        `Erro ao enviar confirmação de agendamento ${medicalRecordId}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        `Erro ao enviar confirmação de agendamento ${appointmentId}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         error instanceof Error ? error.stack : '',
       );
     }
   }
 
-  /**
-   * Cron que roda a cada 5 minutos para enviar lembretes de agendamento.
-   * Busca consultas com startDate entre 12h ± 5min a partir de agora,
-   * com status SCHEDULED e sem lembrete enviado (reminderSentAt = null).
-   */
   @Cron('0 0 * * *')
   async sendReminderMessages() {
     try {
@@ -97,16 +85,16 @@ export class CalendarReminderService {
       const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
       const marginMs = 5 * 60 * 1000;
 
-      const appointments = await this.medicalRecordRepository.find({
+      const appointments = await this.appointmentRepository.find({
         where: {
-          status: MedicalRecordStatusEnum.CREATED,
+          status: AppointmentStatusEnum.CREATED,
           reminderSentAt: IsNull(),
           startDate: Between(
             new Date(twelveHoursFromNow.getTime() - marginMs),
             new Date(twelveHoursFromNow.getTime() + marginMs),
           ),
         },
-        relations: ['client', 'user'],
+        relations: ['medicalRecord', 'medicalRecord.client', 'user'],
       });
 
       if (appointments.length === 0) return;
@@ -134,16 +122,29 @@ export class CalendarReminderService {
     medicalRecordId: number,
     userId: number,
   ): Promise<SendTemplateMessageDto> {
-    const appointment = await this.medicalRecordRepository.findOne({
-      where: { id: medicalRecordId, userId },
-      relations: ['client', 'user'],
+    const appointment = await this.appointmentRepository.findOne({
+      where: {
+        medicalRecordId,
+        userId,
+        status: Not(
+          In([
+            AppointmentStatusEnum.CANCELED,
+            AppointmentStatusEnum.CANCELED_SCHEDULE,
+            AppointmentStatusEnum.CONCLUDED,
+          ]),
+        ),
+      },
+      relations: ['medicalRecord', 'medicalRecord.client', 'user'],
+      order: { startDate: 'DESC' },
     });
 
     if (!appointment) {
-      throw new NotFoundException('Prontuário não encontrado');
+      throw new NotFoundException(
+        'Nenhum agendamento ativo encontrado para este prontuário',
+      );
     }
 
-    if (!appointment.client?.telephone?.trim()) {
+    if (!appointment.medicalRecord?.client?.telephone?.trim()) {
       throw new BadRequestException(
         'Paciente não possui telefone cadastrado para envio de WhatsApp',
       );
@@ -155,11 +156,11 @@ export class CalendarReminderService {
   }
 
   async notifyProfessionalAppointmentConfirmed(
-    medicalRecordId: number,
+    appointmentId: number,
     userId: number,
   ): Promise<{ success: boolean; message: string }> {
     const appointment = await this.findAppointmentForProfessionalNotification(
-      medicalRecordId,
+      appointmentId,
       userId,
     );
 
@@ -171,11 +172,11 @@ export class CalendarReminderService {
   }
 
   async notifyProfessionalAppointmentCanceled(
-    medicalRecordId: number,
+    appointmentId: number,
     userId: number,
   ): Promise<{ success: boolean; message: string }> {
     const appointment = await this.findAppointmentForProfessionalNotification(
-      medicalRecordId,
+      appointmentId,
       userId,
     );
 
@@ -186,46 +187,37 @@ export class CalendarReminderService {
     );
   }
 
-  /**
-   * Envia notificação ao profissional sem interromper o fluxo principal.
-   */
   async sendProfessionalAppointmentCanceledSilently(
-    medicalRecordId: number,
+    appointmentId: number,
   ): Promise<void> {
     await this.trySendProfessionalNotificationSilently(
-      medicalRecordId,
+      appointmentId,
       WHATSAPP_PROFESSIONAL_CANCEL_TEMPLATE,
       'Cancelamento de agendamento enviado ao profissional',
     );
   }
 
-  /**
-   * Envia notificação de confirmação ao profissional sem interromper o fluxo principal.
-   */
   async sendProfessionalAppointmentConfirmedSilently(
-    medicalRecordId: number,
+    appointmentId: number,
   ): Promise<void> {
     await this.trySendProfessionalNotificationSilently(
-      medicalRecordId,
+      appointmentId,
       WHATSAPP_PROFESSIONAL_CONFIRM_TEMPLATE,
       'Confirmação de agendamento enviada ao profissional',
     );
   }
 
   private async trySendProfessionalNotificationSilently(
-    medicalRecordId: number,
+    appointmentId: number,
     templateName: string,
     successMessage: string,
   ): Promise<void> {
     try {
-      const appointment = await this.medicalRecordRepository.findOne({
-        where: { id: medicalRecordId },
-        relations: ['client', 'user'],
-      });
+      const appointment = await this.findAppointmentWithRelations(appointmentId);
 
       if (!appointment) {
         this.logger.warn(
-          `WhatsApp ${templateName}: prontuário ${medicalRecordId} não encontrado — notificação ignorada`,
+          `WhatsApp ${templateName}: agendamento ${appointmentId} não encontrado — notificação ignorada`,
         );
         return;
       }
@@ -234,7 +226,7 @@ export class CalendarReminderService {
 
       if (skipReason) {
         this.logger.warn(
-          `WhatsApp ${templateName}: consulta #${medicalRecordId} — ${skipReason}`,
+          `WhatsApp ${templateName}: consulta #${appointmentId} — ${skipReason}`,
         );
         return;
       }
@@ -246,14 +238,14 @@ export class CalendarReminderService {
       );
     } catch (error) {
       this.logger.error(
-        `Erro ao enviar WhatsApp ${templateName} para consulta ${medicalRecordId}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        `Erro ao enviar WhatsApp ${templateName} para consulta ${appointmentId}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         error instanceof Error ? error.stack : '',
       );
     }
   }
 
   private getProfessionalNotificationSkipReason(
-    appointment: MedicalRecord,
+    appointment: Appointment,
   ): string | null {
     if (!appointment.user?.telephone?.trim()) {
       return 'profissional sem telefone cadastrado';
@@ -263,7 +255,7 @@ export class CalendarReminderService {
       return 'credenciais WhatsApp não configuradas';
     }
 
-    if (!appointment.client?.name?.trim()) {
+    if (!appointment.medicalRecord?.client?.name?.trim()) {
       return 'paciente sem nome cadastrado';
     }
 
@@ -274,13 +266,7 @@ export class CalendarReminderService {
     return null;
   }
 
-  /**
-   * Envia mensagem de lembrete para uma consulta específica.
-   * - Gera token de confirmação caso ainda não exista
-   * - Envia via template do WhatsApp Business (obrigatório para mensagens proativas)
-   * - Marca reminderSentAt para evitar reenvio
-   */
-  private async sendReminderMessage(appointment: MedicalRecord) {
+  private async sendReminderMessage(appointment: Appointment) {
     try {
       if (appointment.reminderSentAt) {
         this.logger.warn(
@@ -289,9 +275,9 @@ export class CalendarReminderService {
         return;
       }
 
-      if (!appointment.client?.telephone) {
+      if (!appointment.medicalRecord?.client?.telephone) {
         this.logger.warn(
-          `Telefone não configurado para cliente ${appointment.clientId} — pulando lembrete para consulta ${appointment.id}`,
+          `Telefone não configurado — pulando lembrete para consulta ${appointment.id}`,
         );
         return;
       }
@@ -308,12 +294,12 @@ export class CalendarReminderService {
         payload,
       );
 
-      await this.medicalRecordRepository.update(appointment.id, {
+      await this.appointmentRepository.update(appointment.id, {
         reminderSentAt: new Date(),
       });
 
       this.logger.log(
-        `Lembrete enviado para ${appointment.client.name} (${payload.to}) — Consulta #${appointment.id}`,
+        `Lembrete enviado para ${appointment.medicalRecord.client.name} (${payload.to}) — Consulta #${appointment.id}`,
       );
     } catch (error) {
       this.logger.error(
@@ -322,7 +308,7 @@ export class CalendarReminderService {
     }
   }
 
-  private async ensureConfirmationToken(appointment: MedicalRecord): Promise<void> {
+  private async ensureConfirmationToken(appointment: Appointment): Promise<void> {
     if (appointment.confirmationToken) {
       return;
     }
@@ -346,32 +332,32 @@ export class CalendarReminderService {
     encrypted += cipher.final('hex');
 
     appointment.confirmationToken = encrypted;
-    await this.medicalRecordRepository.update(appointment.id, {
+    await this.appointmentRepository.update(appointment.id, {
       confirmationToken: appointment.confirmationToken,
     });
   }
 
   private buildReminderTemplatePayload(
-    appointment: MedicalRecord,
+    appointment: Appointment,
   ): SendTemplateMessageDto {
-    // Template lembrete_agendamento_12h: orienta o paciente a confirmar ou cancelar pelo link ({{4}}).
     const frontendUrl = this.configService.get<string>('frontendUrl');
     const urlSafeToken = Buffer.from(
-      appointment.confirmationToken,
+      appointment.confirmationToken!,
       'hex',
     ).toString('base64url');
     const confirmationLink = `${frontendUrl}/confirmar-presenca/${urlSafeToken}`;
 
     const appointmentTime = this.formatAppointmentDateTime(appointment);
-
-    const phone = this.formatPhoneWithDDI(appointment.client.telephone);
+    const phone = this.formatPhoneWithDDI(
+      appointment.medicalRecord!.client!.telephone,
+    );
 
     return {
       to: phone,
       templateName: WHATSAPP_REMINDER_TEMPLATE,
       languageCode: 'pt_BR',
       bodyParameters: [
-        appointment.client.name,
+        appointment.medicalRecord!.client!.name,
         appointment.user.name,
         appointmentTime,
         confirmationLink,
@@ -381,23 +367,32 @@ export class CalendarReminderService {
   }
 
   private async findAppointmentForProfessionalNotification(
-    medicalRecordId: number,
+    appointmentId: number,
     userId: number,
-  ): Promise<MedicalRecord> {
-    const appointment = await this.medicalRecordRepository.findOne({
-      where: { id: medicalRecordId, userId },
-      relations: ['client', 'user'],
+  ): Promise<Appointment> {
+    const appointment = await this.appointmentRepository.findOne({
+      where: { id: appointmentId, userId },
+      relations: ['medicalRecord', 'medicalRecord.client', 'user'],
     });
 
     if (!appointment) {
-      throw new NotFoundException('Prontuário não encontrado');
+      throw new NotFoundException('Agendamento não encontrado');
     }
 
     return appointment;
   }
 
+  private async findAppointmentWithRelations(
+    appointmentId: number,
+  ): Promise<Appointment | null> {
+    return this.appointmentRepository.findOne({
+      where: { id: appointmentId },
+      relations: ['medicalRecord', 'medicalRecord.client', 'user'],
+    });
+  }
+
   private async sendProfessionalNotification(
-    appointment: MedicalRecord,
+    appointment: Appointment,
     templateName: string,
     successMessage: string,
   ): Promise<{ success: boolean; message: string }> {
@@ -413,7 +408,7 @@ export class CalendarReminderService {
       );
     }
 
-    if (!appointment.client?.name?.trim()) {
+    if (!appointment.medicalRecord?.client?.name?.trim()) {
       throw new BadRequestException(
         'Paciente não possui nome cadastrado para a notificação',
       );
@@ -449,7 +444,7 @@ export class CalendarReminderService {
   }
 
   private buildProfessionalNotificationPayload(
-    appointment: MedicalRecord,
+    appointment: Appointment,
     templateName: string,
   ): SendTemplateMessageDto {
     return {
@@ -458,7 +453,7 @@ export class CalendarReminderService {
       languageCode: 'pt_BR',
       bodyParameters: [
         appointment.user.name,
-        appointment.client.name,
+        appointment.medicalRecord!.client!.name,
         this.formatProfessionalAppointmentDate(appointment),
         this.formatProfessionalAppointmentTimeRange(appointment),
       ],
@@ -466,7 +461,7 @@ export class CalendarReminderService {
   }
 
   private formatProfessionalAppointmentTimeRange(
-    appointment: MedicalRecord,
+    appointment: Appointment,
   ): string {
     const startDate = appointment.startDate
       ? new Date(appointment.startDate)
@@ -495,7 +490,7 @@ export class CalendarReminderService {
     return `${startTime} às ${endTimeCompact}`;
   }
 
-  private formatProfessionalAppointmentDate(appointment: MedicalRecord): string {
+  private formatProfessionalAppointmentDate(appointment: Appointment): string {
     const appointmentDate = appointment.startDate
       ? new Date(appointment.startDate)
       : new Date(appointment.updatedAt);
@@ -507,7 +502,7 @@ export class CalendarReminderService {
     });
   }
 
-  private formatAppointmentDateTime(appointment: MedicalRecord): string {
+  private formatAppointmentDateTime(appointment: Appointment): string {
     const appointmentDate = appointment.startDate
       ? new Date(appointment.startDate)
       : new Date(appointment.updatedAt);

@@ -38,4 +38,10 @@ export class ResponseMedicalRecordResumeDto {
 
   @ApiPropertyOptional()
   status?: string;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Se o paciente compareceu à consulta' })
+  attended?: boolean | null;
+
+  @ApiPropertyOptional({ description: 'Total de sessões dos serviços deste agendamento' })
+  quantitySessions?: number;
 }

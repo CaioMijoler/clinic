@@ -1,9 +1,9 @@
 import { MedicalRecord } from '../../src/modules/medical-record/entities/medical-record.entity';
+import { Appointment } from '../../src/modules/appointments/entities/appointment.entity';
 import { Client } from '../../src/modules/clients/entities/client.entity';
 import { User } from '../../src/modules/user/entities/user.entity';
 import { MedicalRecordStatusEnum } from '../../src/utils/enum/medical-record.enum';
-
-// ─── User Factory ────────────────────────────────────────────────────────────
+import { AppointmentStatusEnum } from '../../src/utils/enum/appointment-status.enum';
 
 export function makeUser(overrides: Partial<User> = {}): User {
   return {
@@ -20,8 +20,6 @@ export function makeUser(overrides: Partial<User> = {}): User {
   } as User;
 }
 
-// ─── Client Factory ───────────────────────────────────────────────────────────
-
 export function makeClient(overrides: Partial<Client> = {}): Client {
   return {
     id: 1,
@@ -37,24 +35,20 @@ export function makeClient(overrides: Partial<Client> = {}): Client {
   } as Client;
 }
 
-// ─── MedicalRecord Factory ────────────────────────────────────────────────────
-
 export function makeMedicalRecord(
   overrides: Partial<MedicalRecord> = {},
 ): MedicalRecord {
   return {
     id: 1,
-    calendarGoogleId: null,
-    title: 'Consulta — Maria da Silva',
-    startDate: new Date('2024-10-01T10:00:00'),
-    endDate: new Date('2024-10-01T11:00:00'),
+    title: 'Tratamento — Maria da Silva',
     symptoms: 'Dor nas costas e cansaço',
     clinicalExam: 'Exame físico sem alterações relevantes',
     completeClinicalExam: 'Conclusão do exame clínico',
     conclusion: 'Paciente com lombalgia leve',
     clientId: 1,
     userId: 1,
-    status: MedicalRecordStatusEnum.CREATED,
+    status: MedicalRecordStatusEnum.PENDING,
+    totalValue: null,
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
     client: makeClient(),
@@ -65,11 +59,36 @@ export function makeMedicalRecord(
     questions: [],
     pathologies: [],
     treatments: [],
+    medicalRecordServices: [],
+    appointments: [],
     ...overrides,
   } as MedicalRecord;
 }
 
-// ─── Lista de prontuários de um cliente ──────────────────────────────────────
+export function makeAppointment(
+  overrides: Partial<Appointment> = {},
+): Appointment {
+  return {
+    id: 1,
+    medicalRecordId: 1,
+    userId: 1,
+    startDate: new Date('2024-10-01T10:00:00'),
+    endDate: new Date('2024-10-01T11:00:00'),
+    status: AppointmentStatusEnum.CREATED,
+    quantitySessions: 1,
+    title: 'Consulta — Maria da Silva',
+    totalValue: null,
+    confirmationToken: null,
+    confirmedAt: null,
+    reminderSentAt: null,
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    medicalRecord: makeMedicalRecord(),
+    user: makeUser(),
+    medicalRecordServices: [],
+    ...overrides,
+  } as Appointment;
+}
 
 export function makeMedicalRecordList(
   clientId: number,
@@ -80,7 +99,7 @@ export function makeMedicalRecordList(
       id: index + 1,
       clientId,
       symptoms: `Sintoma ${index + 1}`,
-      title: `Consulta ${index + 1}`,
+      title: `Tratamento ${index + 1}`,
       client: makeClient({ id: clientId }),
     }),
   );

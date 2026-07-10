@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { MedicalRecord } from './medical-record.entity';
 import { Service } from '../../services/entities/service.entity';
+import { Appointment } from '../../appointments/entities/appointment.entity';
 
 @Entity('medical_record_services')
 export class MedicalRecordService {
@@ -18,8 +19,14 @@ export class MedicalRecordService {
   @Column({ name: 'medical_record_id', type: 'int' })
   medicalRecordId: number;
 
+  @Column({ name: 'appointment_id', type: 'int', nullable: true })
+  appointmentId: number | null;
+
   @Column({ name: 'service_id', type: 'int' })
   serviceId: number;
+
+  @Column({ name: 'quantity_sessions', type: 'int', default: 1 })
+  quantitySessions: number;
 
   @Column({ name: 'duration_minutes', type: 'int' })
   durationMinutes: number;
@@ -61,4 +68,10 @@ export class MedicalRecordService {
   @ManyToOne(() => Service)
   @JoinColumn({ name: 'service_id' })
   service: Service;
+
+  @ManyToOne(() => Appointment, (appointment) => appointment.medicalRecordServices, {
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'appointment_id' })
+  appointment: Appointment | null;
 }

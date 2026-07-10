@@ -112,14 +112,31 @@ O agendamento pode ser criado a partir de um `MedicalRecord` existente (via `med
 ### Endpoints
 | Método | Rota | Auth | Descrição |
 |---|---|---|---|
-| `POST` | `/v1/calendar` | ✅ Bearer | Criar agendamento + MedicalRecord (status: SCHEDULED) |
+| `POST` | `/v1/calendar` | ✅ Bearer | Criar agendamento (`appointments`) + serviços; status inicial `created` |
 | `GET` | `/v1/calendar` | ✅ Bearer | Listar eventos por período |
-| `DELETE` | `/v1/calendar/:id` | ✅ Bearer | Cancelar evento (status: CANCELED_SCHEDULE) |
-| `POST` | `/v1/calendar/:eventId/confirm-attendance` | ❌ Público | Paciente confirma presença via token |
-| `GET` | `/v1/calendar/:eventId/confirmation-link` | ✅ Bearer | Gera link de confirmação manualmente |
+| `DELETE` | `/v1/calendar/:id` | ✅ Bearer | Cancelar/excluir agendamento conforme status |
+| `POST` | `/v1/calendar/:id/confirm-presence` | ✅ Bearer | Profissional confirma presença (status → `confirmed_schedule`) |
+| `POST` | `/v1/calendar/:id/mark-attendance` | ✅ Bearer | Registrar comparecimento no dia (`attended`) |
+| `POST` | `/v1/calendar/:appointmentId/confirm-attendance` | ❌ Público | Paciente confirma presença via token |
+| `POST` | `/v1/calendar/:appointmentId/cancel-attendance` | ❌ Público | Paciente cancela via token |
+| `GET` | `/v1/calendar/confirmation/:urlSafeToken` | ❌ Público | Preview do link de confirmação |
+
+### Comparecimento no dia (`mark-attendance`)
+
+Disponível apenas quando o status do agendamento é `confirmed_schedule` ou `in_progress`.
+
+| Ação do profissional | Body | Efeito |
+|---|---|---|
+| **Compareceu** | `{ "attended": true }` | Mantém o status atual; `attended = true`. O fluxo do atendimento segue normalmente. |
+| **Faltou** | `{ "attended": false }` | `attended = false` **e** cancela o agendamento (`status = canceled_schedule`). Conta como falta nas sessões realizadas. |
+
+Campo `appointments.attended` (nullable):
+- `null` — ainda não informado
+- `true` — compareceu
+- `false` — faltou (agendamento cancelado)
 
 ### Services
-- **`CalendarService`** — CRUD de agendamentos + confirmação de presença + geração de token
+- **`CalendarService`** — CRUD de agendamentos + confirmação de presença + comparecimento no dia
 - **`CalendarReminderService`** — Cron job que envia lembretes WhatsApp 12h antes do atendimento (a cada 5 min)
 
 ---
@@ -222,3 +239,4 @@ POST /v1/auth/logout  → encerrar sessão
 | Envio automático pós-prontuário | — | ❌ Não implementado ainda |
 | Lembrete automático de agendamento (WhatsApp 12h) | `calendar` (CalendarReminderService) | ✅ Implementado |
 | Confirmação de presença do paciente | `calendar` (confirmAttendance) | ✅ Implementado |
+| Comparecimento no dia (compareceu / faltou) | `calendar` (markAttendance) | ✅ Implementado |

@@ -21,6 +21,7 @@ import { Pathology } from '../../../modules/pathologies/entities/pathology.entit
 import { MedicalRecordDocument } from './medical-record-documents.entity';
 import { Notification } from '../../../modules/notification/entities/notification.entity';
 import { MedicalRecordService } from './medical-record-service.entity';
+import { Appointment } from '../../appointments/entities/appointment.entity';
 
 @Entity('medical_record')
 export class MedicalRecord {
@@ -33,12 +34,6 @@ export class MedicalRecord {
     nullable: true,
   })
   title: string;
-
-  @Column({ name: 'start_date', type: 'timestamp', nullable: true })
-  startDate: Date;
-
-  @Column({ name: 'end_date', type: 'timestamp', nullable: true })
-  endDate: Date;
 
   @Column({
     type: 'text',
@@ -94,28 +89,6 @@ export class MedicalRecord {
   })
   totalValue: number | null;
 
-  @Column({
-    name: 'confirmation_token',
-    type: 'varchar',
-    length: 255,
-    nullable: true,
-  })
-  confirmationToken: string;
-
-  @Column({
-    name: 'confirmed_at',
-    type: 'timestamp',
-    nullable: true,
-  })
-  confirmedAt: Date;
-
-  @Column({
-    name: 'reminder_sent_at',
-    type: 'timestamp',
-    nullable: true,
-  })
-  reminderSentAt: Date;
-
   @CreateDateColumn({
     name: 'created_at',
   })
@@ -139,6 +112,9 @@ export class MedicalRecord {
     (medicalRecordServices) => medicalRecordServices.medicalRecord,
   )
   medicalRecordServices: MedicalRecordService[];
+
+  @OneToMany(() => Appointment, (appointment) => appointment.medicalRecord)
+  appointments: Appointment[];
 
   @OneToMany(() => Feedback, (feedbacks) => feedbacks.medicalRecord)
   feedbacks: Feedback[];

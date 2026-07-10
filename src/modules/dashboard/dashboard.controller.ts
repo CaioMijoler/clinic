@@ -5,7 +5,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { DashboardFilterDto } from './dto/dashboard-filter.dto';
 import { DashboardMedicalRecordFilterDto } from './dto/dashboard-medical-record-filter.dto';
 import { TDashboardStatsResponse } from './dto/dashboard-response.dto';
-import { MedicalRecordResponseDto } from '../medical-record/dto/create-medical-record.dto';
+import { DashboardAppointmentResponseDto } from './dto/dashboard-appointment-response.dto';
 import { IPaginate } from '../../utils/paginate';
 
 @ApiTags('dashboard')
@@ -24,7 +24,7 @@ export class DashboardController {
   getMedicalRecords(
     @Req() req: Request,
     @Query() filter: DashboardMedicalRecordFilterDto,
-  ): Promise<IPaginate<MedicalRecordResponseDto>> {
+  ): Promise<IPaginate<DashboardAppointmentResponseDto>> {
     return this.dashboardService.getMedicalRecords(req?.user, filter);
   }
 }

@@ -13,6 +13,8 @@ import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { User } from '../user/entities/user.entity';
 import { MedicalRecord } from '../medical-record/entities/medical-record.entity';
 import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
+import { AppointmentStatusEnum } from '../../utils/enum/appointment-status.enum';
+import { Appointment } from '../appointments/entities/appointment.entity';
 import { Client } from '../clients/entities/client.entity';
 import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-resume.dto';
 import * as crypto from 'crypto';
@@ -26,6 +28,8 @@ import { CreateCalendarServiceItemDto } from './dto/create-calendar.dto';
 export class CalendarService {
   constructor(
     @InjectDataSource() private dataSource: DataSource,
+    @InjectRepository(Appointment)
+    private readonly appointmentRepository: Repository<Appointment>,
     @InjectRepository(MedicalRecord)
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
     private readonly configService: ConfigService,
@@ -58,10 +62,13 @@ export class CalendarService {
           );
         }
 
+        let medicalRecord: MedicalRecord | null = null;
+
         if (createCalendarDto.medicalRecordId) {
-          const medicalRecord = await manager.findOne(MedicalRecord, {
-            where: { id: createCalendarDto.medicalRecordId },
+          medicalRecord = await manager.findOne(MedicalRecord, {
+            where: { id: createCalendarDto.medicalRecordId, userId: userAuth.id },
           });
+
           if (!medicalRecord) {
             throw new NotFoundException(
               'Não conseguimos encontrar o prontuário.',
@@ -113,27 +120,26 @@ export class CalendarService {
         }
 
         const startDate = new Date(createCalendarDto.start.dateTime);
-        let endDate = new Date(createCalendarDto.end.dateTime);
+        const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
 
-        endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
-
-        const conflictingRecords = await manager
-          .createQueryBuilder(MedicalRecord, 'mr')
-          .where('mr.user_id = :userId', { userId: userAuth.id })
-          .andWhere('mr.status IN (:...statuses)', {
+        const conflictingAppointment = await manager
+          .createQueryBuilder(Appointment, 'appointment')
+          .where('appointment.user_id = :userId', { userId: userAuth.id })
+          .andWhere('appointment.status IN (:...statuses)', {
             statuses: [
-              MedicalRecordStatusEnum.CREATED,
-              MedicalRecordStatusEnum.SCHEDULED,
-              MedicalRecordStatusEnum.CONFIRMED_SCHEDULE,
+              AppointmentStatusEnum.CREATED,
+              AppointmentStatusEnum.SCHEDULED,
+              AppointmentStatusEnum.CONFIRMED_SCHEDULE,
+              AppointmentStatusEnum.IN_PROGRESS,
             ],
           })
           .andWhere(
-            '(mr.start_date < :endDate AND mr.end_date > :startDate)',
+            '(appointment.start_date < :endDate AND appointment.end_date > :startDate)',
             { startDate, endDate },
           )
           .getOne();
 
-        if (conflictingRecords) {
+        if (conflictingAppointment) {
           throw new BadRequestException(
             'Horário indisponível. Já existe um agendamento neste horário.',
           );
@@ -141,33 +147,53 @@ export class CalendarService {
 
         const title = `${createCalendarDto.summary}`.trim();
 
-        const newMedicalRecord = manager.create(MedicalRecord, {
+        const totalQuantitySessions = createCalendarDto.services.reduce(
+          (total, item) => total + (item.quantitySessions ?? 1),
+          0,
+        );
+
+        if (!medicalRecord) {
+          medicalRecord = manager.create(MedicalRecord, {
+            title,
+            status: MedicalRecordStatusEnum.PENDING,
+            clientId: client.id,
+            userId: userAuth.id,
+            totalValue: createCalendarDto.totalValue ?? null,
+          });
+          medicalRecord = await manager.save(medicalRecord);
+        }
+
+        const newAppointment = manager.create(Appointment, {
           title,
           startDate: createCalendarDto.start.dateTime,
           endDate,
-          status: MedicalRecordStatusEnum.CREATED,
-          clientId: client.id,
+          status: AppointmentStatusEnum.CREATED,
+          medicalRecordId: medicalRecord.id,
           userId: userAuth.id,
+          quantitySessions: totalQuantitySessions || 1,
           totalValue: createCalendarDto.totalValue ?? null,
+          attended: null,
         });
 
-        const savedMedicalRecord = await manager.save(newMedicalRecord);
+        const savedAppointment = await manager.save(newAppointment);
 
         const medicalRecordServices = createCalendarDto.services.map(
           (item: CreateCalendarServiceItemDto) =>
             manager.create(MedicalRecordService, {
-              medicalRecordId: savedMedicalRecord.id,
+              medicalRecordId: medicalRecord!.id,
+              appointmentId: savedAppointment.id,
               serviceId: item.serviceId,
               durationMinutes: item.durationMinutes,
               totalValue: item.courtesy ? 0 : item.totalValue,
               courtesy: item.courtesy ?? false,
               discount: item.discount ?? 0,
+              quantitySessions: item.quantitySessions ?? 1,
             }),
         );
 
         await manager.save(medicalRecordServices);
 
-        return savedMedicalRecord;
+        return savedAppointment;
       });
 
       if (createCalendarDto.sendWhatsAppConfirmation) {
@@ -197,7 +223,7 @@ export class CalendarService {
         throw new NotFoundException('Não conseguimos encontrar o solicitante.');
       }
 
-      const where: FindManyOptions<MedicalRecord>['where'] = {
+      const where: FindManyOptions<Appointment>['where'] = {
         userId: userAuth.id,
       };
 
@@ -208,13 +234,17 @@ export class CalendarService {
         );
       }
 
-      const medicalRecords = await this.medicalRecordRepository.find({
+      const appointments = await this.appointmentRepository.find({
         where,
-        relations: ['client'],
+        relations: [
+          'medicalRecord',
+          'medicalRecord.client',
+          'medicalRecordServices',
+        ],
         order: { startDate: 'ASC' },
       });
 
-      return medicalRecords.map((record) => this.mapToEventDto(record));
+      return appointments.map((appointment) => this.mapToEventDto(appointment));
     } catch (error) {
       const message = 'Ocorreu um erro ao buscar os eventos.';
       if (error instanceof HttpException) throw error;
@@ -223,7 +253,7 @@ export class CalendarService {
     }
   }
 
-  async remove(medicalRecordId: string, user: User) {
+  async remove(appointmentId: string, user: User) {
     try {
       const userAuth = await this.dataSource.manager.findOne(User, {
         where: { id: user.id },
@@ -234,19 +264,19 @@ export class CalendarService {
         throw new NotFoundException('Não conseguimos encontrar o solicitante.');
       }
 
-      const medicalRecord = await this.medicalRecordRepository.findOne({
-        where: { id: Number(medicalRecordId), userId: userAuth.id },
+      const appointment = await this.appointmentRepository.findOne({
+        where: { id: Number(appointmentId), userId: userAuth.id },
       });
 
-      if (!medicalRecord) {
+      if (!appointment) {
         throw new BadRequestException(
           'Não conseguimos encontrar o evento agendado, tente novamente!',
         );
       }
 
       if (
-        medicalRecord.status !== MedicalRecordStatusEnum.CREATED &&
-        medicalRecord.status !== MedicalRecordStatusEnum.IN_PROGRESS
+        appointment.status !== AppointmentStatusEnum.CREATED &&
+        appointment.status !== AppointmentStatusEnum.IN_PROGRESS
       ) {
         throw new BadRequestException(
           'Somente agendamentos criados ou em andamento podem ser cancelados.',
@@ -254,15 +284,15 @@ export class CalendarService {
       }
 
       const canceledStatus =
-        medicalRecord.status === MedicalRecordStatusEnum.IN_PROGRESS
-          ? MedicalRecordStatusEnum.CANCELED_SCHEDULE
-          : MedicalRecordStatusEnum.CANCELED;
+        appointment.status === AppointmentStatusEnum.IN_PROGRESS
+          ? AppointmentStatusEnum.CANCELED_SCHEDULE
+          : AppointmentStatusEnum.CANCELED;
 
-      await this.medicalRecordRepository.update(medicalRecord.id, {
+      await this.appointmentRepository.update(appointment.id, {
         status: canceledStatus,
       });
 
-      return { success: true, id: medicalRecord.id };
+      return { success: true, id: appointment.id };
     } catch (error) {
       const message = 'Ocorreu um erro ao cancelar o evento.';
       if (error instanceof HttpException) throw error;
@@ -272,7 +302,7 @@ export class CalendarService {
   }
 
   async confirmPresenceByProfessional(
-    medicalRecordId: string,
+    appointmentId: string,
     user: User,
   ): Promise<{ success: boolean; message: string }> {
     try {
@@ -285,32 +315,32 @@ export class CalendarService {
         throw new NotFoundException('Não conseguimos encontrar o solicitante.');
       }
 
-      const medicalRecord = await this.medicalRecordRepository.findOne({
-        where: { id: Number(medicalRecordId), userId: userAuth.id },
-        relations: ['client'],
+      const appointment = await this.appointmentRepository.findOne({
+        where: { id: Number(appointmentId), userId: userAuth.id },
+        relations: ['medicalRecord', 'medicalRecord.client'],
       });
 
-      if (!medicalRecord) {
+      if (!appointment) {
         throw new BadRequestException(
           'Não conseguimos encontrar o evento agendado, tente novamente!',
         );
       }
 
-      if (medicalRecord.status !== MedicalRecordStatusEnum.CREATED) {
+      if (appointment.status !== AppointmentStatusEnum.CREATED) {
         throw new BadRequestException(
           'Somente agendamentos com status criado podem ter a presença confirmada.',
         );
       }
 
-      await this.medicalRecordRepository.update(medicalRecord.id, {
-        status: MedicalRecordStatusEnum.CONFIRMED_SCHEDULE,
+      await this.appointmentRepository.update(appointment.id, {
+        status: AppointmentStatusEnum.CONFIRMED_SCHEDULE,
         confirmedAt: new Date(),
       });
 
       await this.notificationService.create({
-        description: `Presença confirmada pelo profissional para ${medicalRecord.client?.name ?? 'paciente'}`,
-        medicalRecordId: medicalRecord.id,
-        userId: medicalRecord.userId,
+        description: `Presença confirmada pelo profissional para ${appointment.medicalRecord?.client?.name ?? 'paciente'}`,
+        medicalRecordId: appointment.medicalRecordId,
+        userId: appointment.userId,
       });
 
       return {
@@ -326,102 +356,181 @@ export class CalendarService {
     }
   }
 
-  async getConfirmationPreview(urlSafeToken: string) {
-    const medicalRecord =
-      await this.findMedicalRecordByUrlSafeToken(urlSafeToken);
+  async markAttendance(
+    appointmentId: string,
+    attended: boolean,
+    user: User,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    attended: boolean;
+    status: string;
+  }> {
+    try {
+      const userAuth = await this.dataSource.manager.findOne(User, {
+        where: { id: user.id },
+        select: ['id'],
+      });
 
-    const startDate = medicalRecord.startDate
-      ? new Date(medicalRecord.startDate)
-      : new Date(medicalRecord.updatedAt);
+      if (!userAuth) {
+        throw new NotFoundException('Não conseguimos encontrar o solicitante.');
+      }
+
+      const appointment = await this.appointmentRepository.findOne({
+        where: { id: Number(appointmentId), userId: userAuth.id },
+        relations: ['medicalRecord', 'medicalRecord.client'],
+      });
+
+      if (!appointment) {
+        throw new BadRequestException(
+          'Não conseguimos encontrar o evento agendado, tente novamente!',
+        );
+      }
+
+      if (
+        appointment.status !== AppointmentStatusEnum.CONFIRMED_SCHEDULE &&
+        appointment.status !== AppointmentStatusEnum.IN_PROGRESS
+      ) {
+        throw new BadRequestException(
+          'Somente agendamentos confirmados ou em andamento podem registrar comparecimento.',
+        );
+      }
+
+      // Compareceu: mantém o status atual e marca attended=true.
+      // Faltou: marca attended=false e cancela o agendamento (canceled_schedule).
+      const nextStatus = attended
+        ? appointment.status
+        : AppointmentStatusEnum.CANCELED_SCHEDULE;
+
+      await this.appointmentRepository.update(appointment.id, {
+        attended,
+        status: nextStatus,
+      });
+
+      const clientName =
+        appointment.medicalRecord?.client?.name ?? 'paciente';
+
+      await this.notificationService.create({
+        description: attended
+          ? `Comparecimento confirmado para ${clientName}`
+          : `Falta registrada e agendamento cancelado para ${clientName}`,
+        medicalRecordId: appointment.medicalRecordId,
+        userId: appointment.userId,
+      });
+
+      return {
+        success: true,
+        attended,
+        status: nextStatus,
+        message: attended
+          ? 'Comparecimento registrado com sucesso!'
+          : 'Falta registrada e agendamento cancelado.',
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Erro ao registrar comparecimento';
+      Logger.error(message, error instanceof Error ? error.stack : '');
+      throw new BadRequestException(message);
+    }
+  }
+
+  async getConfirmationPreview(urlSafeToken: string) {
+    const appointment =
+      await this.findAppointmentByUrlSafeToken(urlSafeToken);
+
+    const startDate = appointment.startDate
+      ? new Date(appointment.startDate)
+      : new Date(appointment.updatedAt);
 
     return {
       attendance: {
-        appointmentId: String(medicalRecord.id),
-        patientName: medicalRecord.client?.name ?? '',
+        appointmentId: String(appointment.id),
+        patientName: appointment.medicalRecord?.client?.name ?? '',
         appointmentDate: startDate.toISOString().split('T')[0],
         appointmentTime: startDate.toLocaleTimeString('pt-BR', {
           hour: '2-digit',
           minute: '2-digit',
         }),
-        doctorName: medicalRecord.user?.name ?? '',
+        doctorName: appointment.user?.name ?? '',
         specialty: '',
       },
-      status: this.getConfirmationStatus(medicalRecord.status),
+      status: this.getConfirmationStatus(appointment.status),
     };
   }
 
   async confirmAttendanceByLink(
     urlSafeToken: string,
   ): Promise<{ success: boolean; message: string }> {
-    const medicalRecord =
-      await this.findMedicalRecordByUrlSafeToken(urlSafeToken);
-    const { medicalRecordId, uuid } = this.decryptConfirmationPayload(
-      medicalRecord.confirmationToken,
+    const appointment =
+      await this.findAppointmentByUrlSafeToken(urlSafeToken);
+    const { appointmentId, uuid } = this.decryptConfirmationPayload(
+      appointment.confirmationToken!,
     );
 
-    return this.confirmAttendance(medicalRecordId, uuid);
+    return this.confirmAttendance(appointmentId, uuid);
   }
 
   async cancelAttendanceByLink(
     urlSafeToken: string,
   ): Promise<{ success: boolean; message: string }> {
-    const medicalRecord =
-      await this.findMedicalRecordByUrlSafeToken(urlSafeToken);
-    const { medicalRecordId, uuid } = this.decryptConfirmationPayload(
-      medicalRecord.confirmationToken,
+    const appointment =
+      await this.findAppointmentByUrlSafeToken(urlSafeToken);
+    const { appointmentId, uuid } = this.decryptConfirmationPayload(
+      appointment.confirmationToken!,
     );
 
-    return this.cancelAttendance(medicalRecordId, uuid);
+    return this.cancelAttendance(appointmentId, uuid);
   }
 
   async confirmAttendance(
-    medicalRecordId: string,
+    appointmentId: string,
     token: string,
   ): Promise<{ success: boolean; message: string }> {
     try {
-      const medicalRecord = await this.medicalRecordRepository.findOne({
-        where: {
-          id: Number(medicalRecordId),
-        },
-        relations: ['client', 'user'],
+      const appointment = await this.appointmentRepository.findOne({
+        where: { id: Number(appointmentId) },
+        relations: ['medicalRecord', 'medicalRecord.client', 'user'],
       });
 
-      if (!medicalRecord) {
+      if (!appointment) {
         throw new BadRequestException('Consulta não encontrada');
       }
 
-      if (!medicalRecord.confirmationToken) {
+      if (!appointment.confirmationToken) {
         throw new BadRequestException('Consulta sem token de confirmação');
       }
 
       try {
-        const { medicalRecordId: decryptedId, uuid: decryptedUuid } =
-          this.decryptConfirmationPayload(medicalRecord.confirmationToken);
+        const { appointmentId: decryptedId, uuid: decryptedUuid } =
+          this.decryptConfirmationPayload(appointment.confirmationToken);
 
-        if (decryptedId !== medicalRecordId || decryptedUuid !== token) {
+        if (decryptedId !== appointmentId || decryptedUuid !== token) {
           throw new Error('Token mismatch');
         }
-      } catch (err) {
+      } catch {
         throw new BadRequestException('Token inválido para esta consulta');
       }
 
-      if (medicalRecord.status === MedicalRecordStatusEnum.CONFIRMED_SCHEDULE) {
+      if (appointment.status === AppointmentStatusEnum.CONFIRMED_SCHEDULE) {
         throw new BadRequestException('Presença já foi confirmada');
       }
 
-      medicalRecord.status = MedicalRecordStatusEnum.CONFIRMED_SCHEDULE;
-      medicalRecord.confirmedAt = new Date();
+      appointment.status = AppointmentStatusEnum.CONFIRMED_SCHEDULE;
+      appointment.confirmedAt = new Date();
 
-      await this.medicalRecordRepository.save(medicalRecord);
+      await this.appointmentRepository.save(appointment);
 
       await this.notificationService.create({
-        description: `Presença confirmada por ${medicalRecord.client?.name ?? 'usuário'}`,
-        medicalRecordId: medicalRecord.id,
-        userId: medicalRecord.userId,
+        description: `Presença confirmada por ${appointment.medicalRecord?.client?.name ?? 'usuário'}`,
+        medicalRecordId: appointment.medicalRecordId,
+        userId: appointment.userId,
       });
 
       void this.calendarReminderService.sendProfessionalAppointmentConfirmedSilently(
-        medicalRecord.id,
+        appointment.id,
       );
 
       return {
@@ -438,55 +547,53 @@ export class CalendarService {
   }
 
   async cancelAttendance(
-    medicalRecordId: string,
+    appointmentId: string,
     token: string,
   ): Promise<{ success: boolean; message: string }> {
     try {
-      const medicalRecord = await this.medicalRecordRepository.findOne({
-        where: {
-          id: Number(medicalRecordId),
-        },
-        relations: ['client', 'user'],
+      const appointment = await this.appointmentRepository.findOne({
+        where: { id: Number(appointmentId) },
+        relations: ['medicalRecord', 'medicalRecord.client', 'user'],
       });
 
-      if (!medicalRecord) {
+      if (!appointment) {
         throw new BadRequestException('Consulta não encontrada');
       }
 
-      if (!medicalRecord.confirmationToken) {
+      if (!appointment.confirmationToken) {
         throw new BadRequestException('Consulta sem token de confirmação');
       }
 
       try {
-        const { medicalRecordId: decryptedId, uuid: decryptedUuid } =
-          this.decryptConfirmationPayload(medicalRecord.confirmationToken);
+        const { appointmentId: decryptedId, uuid: decryptedUuid } =
+          this.decryptConfirmationPayload(appointment.confirmationToken);
 
-        if (decryptedId !== medicalRecordId || decryptedUuid !== token) {
+        if (decryptedId !== appointmentId || decryptedUuid !== token) {
           throw new Error('Token mismatch');
         }
-      } catch (err) {
+      } catch {
         throw new BadRequestException('Token inválido para esta consulta');
       }
 
       if (
-        medicalRecord.status === MedicalRecordStatusEnum.CANCELED_SCHEDULE ||
-        medicalRecord.status === MedicalRecordStatusEnum.CANCELED
+        appointment.status === AppointmentStatusEnum.CANCELED_SCHEDULE ||
+        appointment.status === AppointmentStatusEnum.CANCELED
       ) {
         throw new BadRequestException('Consulta já foi cancelada');
       }
 
-      medicalRecord.status = MedicalRecordStatusEnum.CANCELED_SCHEDULE;
+      appointment.status = AppointmentStatusEnum.CANCELED_SCHEDULE;
 
-      await this.medicalRecordRepository.save(medicalRecord);
+      await this.appointmentRepository.save(appointment);
 
       await this.notificationService.create({
-        description: `Presença cancelado por ${medicalRecord.client?.name ?? 'usuário'}`,
-        medicalRecordId: medicalRecord.id,
-        userId: medicalRecord.userId,
+        description: `Presença cancelado por ${appointment.medicalRecord?.client?.name ?? 'usuário'}`,
+        medicalRecordId: appointment.medicalRecordId,
+        userId: appointment.userId,
       });
 
       void this.calendarReminderService.sendProfessionalAppointmentCanceledSilently(
-        medicalRecord.id,
+        appointment.id,
       );
 
       return {
@@ -502,9 +609,9 @@ export class CalendarService {
     }
   }
 
-  private async findMedicalRecordByUrlSafeToken(
+  private async findAppointmentByUrlSafeToken(
     urlSafeToken: string,
-  ): Promise<MedicalRecord> {
+  ): Promise<Appointment> {
     let encryptedHex: string;
 
     try {
@@ -513,28 +620,39 @@ export class CalendarService {
       throw new BadRequestException('Link inválido ou expirado');
     }
 
-    const medicalRecord = await this.medicalRecordRepository.findOne({
+    const appointment = await this.appointmentRepository.findOne({
       where: { confirmationToken: encryptedHex },
-      relations: ['client', 'user'],
+      relations: ['medicalRecord', 'medicalRecord.client', 'user'],
     });
 
-    if (!medicalRecord?.confirmationToken) {
+    if (!appointment?.confirmationToken) {
       throw new BadRequestException('Link inválido ou expirado');
     }
 
-    const { medicalRecordId } = this.decryptConfirmationPayload(
-      medicalRecord.confirmationToken,
+    const { appointmentId } = this.decryptConfirmationPayload(
+      appointment.confirmationToken,
     );
 
-    if (medicalRecordId !== String(medicalRecord.id)) {
+    if (appointmentId !== String(appointment.id)) {
+      const legacyAppointment = await this.appointmentRepository.findOne({
+        where: { medicalRecordId: Number(appointmentId) },
+        relations: ['medicalRecord', 'medicalRecord.client', 'user'],
+      });
+
+      if (
+        legacyAppointment?.confirmationToken === appointment.confirmationToken
+      ) {
+        return legacyAppointment;
+      }
+
       throw new BadRequestException('Link inválido ou expirado');
     }
 
-    return medicalRecord;
+    return appointment;
   }
 
   private decryptConfirmationPayload(encryptedHex: string): {
-    medicalRecordId: string;
+    appointmentId: string;
     uuid: string;
   } {
     const algorithm = this.configService.get<string>('cripto.alg');
@@ -553,25 +671,25 @@ export class CalendarService {
     let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
 
-    const [medicalRecordId, uuid] = decrypted.split('@');
+    const [appointmentId, uuid] = decrypted.split('@');
 
-    if (!medicalRecordId || !uuid) {
+    if (!appointmentId || !uuid) {
       throw new Error('Invalid token payload');
     }
 
-    return { medicalRecordId, uuid };
+    return { appointmentId, uuid };
   }
 
   private getConfirmationStatus(
     status: string,
   ): 'pending' | 'confirmed' | 'cancelled' {
-    if (status === MedicalRecordStatusEnum.CONFIRMED_SCHEDULE) {
+    if (status === AppointmentStatusEnum.CONFIRMED_SCHEDULE) {
       return 'confirmed';
     }
 
     if (
-      status === MedicalRecordStatusEnum.CANCELED_SCHEDULE ||
-      status === MedicalRecordStatusEnum.CANCELED
+      status === AppointmentStatusEnum.CANCELED_SCHEDULE ||
+      status === AppointmentStatusEnum.CANCELED
     ) {
       return 'cancelled';
     }
@@ -579,25 +697,37 @@ export class CalendarService {
     return 'pending';
   }
 
-  private mapToEventDto(record: MedicalRecord): ResponseMedicalRecordResumeDto {
+  private mapToEventDto(appointment: Appointment): ResponseMedicalRecordResumeDto {
+    const medicalRecord = appointment.medicalRecord;
+    const services = appointment.medicalRecordServices ?? [];
+    const quantitySessions =
+      services.length > 0
+        ? services.reduce(
+            (total, service) => total + (service.quantitySessions ?? 1),
+            0,
+          )
+        : appointment.quantitySessions ?? 1;
+
     return {
-      id: String(record.id),
-      summary: record.title || 'Agendamento',
-      description: record.title || 'Nenhuma descrição encontrada',
+      id: String(appointment.id),
+      summary: appointment.title || 'Agendamento',
+      description: appointment.title || 'Nenhuma descrição encontrada',
       start: {
-        dateTime: record.startDate?.toISOString(),
+        dateTime: appointment.startDate?.toISOString(),
       },
       end: {
-        dateTime: record.endDate?.toISOString(),
+        dateTime: appointment.endDate?.toISOString(),
       },
-      clientId: record.clientId ? String(record.clientId) : '',
-      clientName: record.client?.name || '',
+      clientId: medicalRecord?.clientId ? String(medicalRecord.clientId) : '',
+      clientName: medicalRecord?.client?.name || '',
       medicalRecord: {
-        id: record.id,
-        title: record.title || 'Agendamento',
-        symptoms: record.symptoms || '',
+        id: medicalRecord?.id ?? 0,
+        title: medicalRecord?.title || appointment.title || 'Agendamento',
+        symptoms: medicalRecord?.symptoms || '',
       },
-      status: record.status,
+      status: appointment.status,
+      attended: appointment.attended ?? null,
+      quantitySessions,
     };
   }
 }

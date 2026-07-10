@@ -33,6 +33,7 @@ import { MedicalRecordDocumentResponseDto } from './dto/medical-record-documents
 import { MedicalRecordService as MedicalRecordServiceEntity } from './entities/medical-record-service.entity';
 import { CreateMedicalRecordServiceItemDto } from './dto/medical-record-services/create-medical-record-service.dto';
 import { Service } from '../services/entities/service.entity';
+import { Appointment } from '../appointments/entities/appointment.entity';
 
 @Injectable()
 export class MedicalRecordService {
@@ -42,6 +43,8 @@ export class MedicalRecordService {
     private readonly medicalRecordRepository: Repository<MedicalRecord>,
     @InjectRepository(MedicalRecordDocument)
     private readonly medicalRecordDocumentRepository: Repository<MedicalRecordDocument>,
+    @InjectRepository(Appointment)
+    private readonly appointmentRepository: Repository<Appointment>,
   ) {}
 
   async create(
@@ -75,8 +78,8 @@ export class MedicalRecordService {
             userId: auth?.id,
             clientId: finalClientId,
             status: createMedicalRecordDto?.conclusion
-              ? MedicalRecordStatusEnum.CONCLUDED
-              : MedicalRecordStatusEnum.CREATED,
+              ? MedicalRecordStatusEnum.FINISHED
+              : MedicalRecordStatusEnum.PENDING,
           });
 
           const newPathologies = await this.createOrUpdatePathologies(
@@ -190,9 +193,22 @@ export class MedicalRecordService {
         'mr',
       );
 
-      return data as
-        | IPaginate<MedicalRecordResponseDto>
-        | MedicalRecordResponseDto[];
+      const records = Array.isArray(data) ? data : data.data;
+      const enriched = await Promise.all(
+        records.map(async (record) => {
+          const sessionStats = await this.getSessionStats(record.id);
+          return { ...record, ...sessionStats };
+        }),
+      );
+
+      if (Array.isArray(data)) {
+        return enriched as MedicalRecordResponseDto[];
+      }
+
+      return {
+        ...data,
+        data: enriched,
+      } as IPaginate<MedicalRecordResponseDto>;
     } catch (error) {
       const message = 'Ocorreu um erro ao buscar os prontuários do cliente.';
       Logger.error(message, error?.stack ?? error.message);
@@ -240,7 +256,25 @@ export class MedicalRecordService {
       ],
     });
 
-    return data as MedicalRecordResponseDto;
+    if (!data) {
+      throw new NotFoundException(
+        'Não conseguimos encontrar o prontuário, por favor tente novamente!',
+      );
+    }
+
+    const latestAppointment = await this.appointmentRepository.findOne({
+      where: { medicalRecordId: id },
+      order: { startDate: 'DESC' },
+    });
+
+    const sessionStats = await this.getSessionStats(id);
+
+    return {
+      ...(data as MedicalRecordResponseDto),
+      latestAppointmentId: latestAppointment?.id,
+      latestAppointmentStatus: latestAppointment?.status,
+      ...sessionStats,
+    };
   }
 
   async update(
@@ -286,10 +320,14 @@ export class MedicalRecordService {
           }
 
           manager.merge(MedicalRecord, medicalRecord, medicalRecordData);
+          const nextStatus = updateMedicalRecordDto.conclusion?.trim()
+            ? MedicalRecordStatusEnum.FINISHED
+            : medicalRecord.status;
           const medicalData = await manager.save(MedicalRecord, {
             ...medicalRecord,
             userId: auth?.id,
             clientId: newClient?.id,
+            status: nextStatus,
           });
 
           let newPathologies = medicalRecord?.medicalRecordPathologies ?? [];
@@ -374,7 +412,7 @@ export class MedicalRecordService {
       }
 
       await this.medicalRecordRepository.update(medicalRecord.id, {
-        status: MedicalRecordStatusEnum.CANCELED,
+        status: MedicalRecordStatusEnum.FINISHED,
       });
     } catch (error) {
       const message = 'Ocorreu um erro ao cancelar o prontuário o cliente.';
@@ -680,6 +718,7 @@ export class MedicalRecordService {
           totalValue: item.courtesy ? 0 : item.totalValue,
           courtesy: item.courtesy ?? false,
           discount: item.discount ?? 0,
+          quantitySessions: item.quantitySessions ?? 1,
         }),
       );
 
@@ -699,5 +738,30 @@ export class MedicalRecordService {
     });
 
     return { services: servicesWithRelations, totalValue };
+  }
+
+  private async getSessionStats(
+    medicalRecordId: number,
+  ): Promise<{ totalSessions: number; completedSessions: number }> {
+    const servicesResult = await this.dataSource
+      .getRepository(MedicalRecordServiceEntity)
+      .createQueryBuilder('mrs')
+      .select('COALESCE(SUM(mrs.quantity_sessions), 0)', 'total')
+      .where('mrs.medical_record_id = :medicalRecordId', { medicalRecordId })
+      .getRawOne<{ total: string }>();
+
+    const completedResult = await this.appointmentRepository
+      .createQueryBuilder('appointment')
+      .select('COUNT(appointment.id)', 'completed')
+      .where('appointment.medical_record_id = :medicalRecordId', {
+        medicalRecordId,
+      })
+      .andWhere('appointment.attended = :attended', { attended: true })
+      .getRawOne<{ completed: string }>();
+
+    return {
+      totalSessions: Number(servicesResult?.total ?? 0),
+      completedSessions: Number(completedResult?.completed ?? 0),
+    };
   }
 }

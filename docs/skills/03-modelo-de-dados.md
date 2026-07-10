@@ -149,18 +149,67 @@ Relação: `ManyToOne` → MedicalRecord
 
 Relação: `ManyToOne` → MedicalRecord
 
+## Entidade: `appointments` (Appointment — Agendamento)
+
+Agendamentos ficam na tabela `appointments`, separados do prontuário (`medical_record`).
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| id | int PK | |
+| medical_record_id | int FK | → medical_record.id |
+| user_id | int FK | → users.id |
+| start_date | timestamp | Início da consulta |
+| end_date | timestamp | Fim da consulta |
+| status | varchar | Enum de agendamento (ver abaixo) |
+| quantity_sessions | int | Soma das sessões dos serviços deste agendamento (default 1) |
+| attended | boolean nullable | Comparecimento no dia: `null` não informado, `true` compareceu, `false` faltou (cancela) |
+| title | varchar(255) | Título |
+| total_value | decimal | Valor total do agendamento |
+| confirmation_token | varchar(255) | Token de confirmação WhatsApp |
+| confirmed_at | timestamp | Quando o paciente confirmou presença |
+| reminder_sent_at | timestamp | Quando o lembrete foi enviado |
+| created_at / updated_at | timestamp | |
+
+### Status do agendamento (`AppointmentStatusEnum`)
+
+```typescript
+// src/utils/enum/appointment-status.enum.ts
+enum AppointmentStatusEnum {
+  CREATED = 'created',
+  SCHEDULED = 'scheduled',
+  CONFIRMED_SCHEDULE = 'confirmed_schedule', // Paciente/profissional confirmou presença
+  IN_PROGRESS = 'in_progress',
+  CONCLUDED = 'concluded',
+  CANCELED = 'canceled',
+  CANCELED_SCHEDULE = 'canceled_schedule', // Cancelado (inclui falta no dia)
+}
+```
+
+### Fluxo de comparecimento (`attended`)
+
+1. Agendamento em `confirmed_schedule` ou `in_progress`.
+2. Profissional registra no calendário:
+   - **Compareceu** → `attended = true`, status inalterado.
+   - **Faltou** → `attended = false` e `status = canceled_schedule`.
+
+Sessões realizadas do tratamento contam apenas agendamentos com `attended = true`.
+
+## Entidade: `medical_record_services`
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| quantity_sessions | int | Quantidade de sessões **deste serviço** (default 1) |
+
+---
+
 ## Status do Prontuário (MedicalRecordStatusEnum)
 
 ```typescript
 // src/utils/enum/medical-record.enum.ts
 enum MedicalRecordStatusEnum {
-  CREATED = 'created', // Prontuário criado, sem agendamento
-  SCHEDULED = 'scheduled', // Agendamento criado
-  CANCELED = 'canceled', // Prontuário cancelado/removido
-  CANCELED_SCHEDULE = 'canceled_schedule', // Agendamento cancelado no Calendar
-  CONFIRMED_SCHEDULE = 'confirmed_schedule', // Paciente confirmou presença
-  IN_PROGRESS = 'in_progress', // Atendimento em andamento
-  CONCLUDED = 'concluded', // Atendimento concluído
+  PENDING = 'pending',
+  IN_PROGRESS = 'in_progress',
+  FINISHED = 'finished',
 }
 ```
 

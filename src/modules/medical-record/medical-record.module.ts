@@ -6,6 +6,7 @@ import { MedicalRecord } from './entities/medical-record.entity';
 import { MedicalRecordDocument } from './entities/medical-record-documents.entity';
 import { MedicalRecordService as MedicalRecordServiceEntity } from './entities/medical-record-service.entity';
 import { Service } from '../services/entities/service.entity';
+import { Appointment } from '../appointments/entities/appointment.entity';
 import { CalendarModule } from '../calendar/calendar.module';
 
 @Module({
@@ -15,6 +16,7 @@ import { CalendarModule } from '../calendar/calendar.module';
       MedicalRecordDocument,
       MedicalRecordServiceEntity,
       Service,
+      Appointment,
     ]),
     CalendarModule,
   ],
