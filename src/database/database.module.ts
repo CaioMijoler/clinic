@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 
+import { migrations } from './migrations';
+
 @Module({
   imports: [
     ConfigModule,
@@ -11,7 +13,7 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
       useFactory: async (configService: ConfigService) => {
         return {
           ...(configService.get('database') as TypeOrmModuleOptions),
-          migrations: [`${__dirname}/migrations/*{.ts,.js}`],
+          migrations,
           entities: [`${__dirname}/../modules/**/*.entity{.ts,.js}`],
           migrationsRun: true,
         };

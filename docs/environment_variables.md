@@ -19,6 +19,7 @@ Este documento descreve as variáveis de ambiente necessárias para o funcioname
 | `DB_NAME` | Nome do banco | `clinical` |
 | `DB_USER` | Usuário do banco | `postgres` |
 | `DB_PASSWORD` | Senha do banco | `******` |
+| `DB_SSL` | Usar SSL (`true` obrigatório no Supabase) | `true` |
 
 ## Autenticação e Sessão
 | Variável | Descrição | Valor Padrão |

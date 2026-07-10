@@ -1,6 +1,8 @@
 import { DataSource } from 'typeorm';
-
 import * as dotenv from 'dotenv';
+
+import { migrations } from './migrations';
+
 dotenv.config();
 
 export default new DataSource({
@@ -10,8 +12,9 @@ export default new DataSource({
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   username: process.env.DB_USER,
-  migrations: [`${__dirname}/migrations/*{.ts,.js}`],
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  migrations,
+  ssl:
+    process.env.DB_SSL === 'true'
+      ? { rejectUnauthorized: false }
+      : undefined,
 });
