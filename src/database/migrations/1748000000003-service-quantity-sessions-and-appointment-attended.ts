@@ -1,5 +1,9 @@
 import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
+/**
+ * Adiciona quantity_sessions por serviço e attended no appointment.
+ * Sem backfill de dados.
+ */
 export class ServiceQuantitySessionsAndAppointmentAttended1748000000003
   implements MigrationInterface
 {
@@ -22,7 +26,11 @@ export class ServiceQuantitySessionsAndAppointmentAttended1748000000003
     }
 
     const appointmentsTable = await queryRunner.getTable('appointments');
-    const hasAttended = appointmentsTable?.columns.some(
+    if (!appointmentsTable) {
+      return;
+    }
+
+    const hasAttended = appointmentsTable.columns.some(
       (column) => column.name === 'attended',
     );
 
@@ -37,33 +45,6 @@ export class ServiceQuantitySessionsAndAppointmentAttended1748000000003
         }),
       );
     }
-
-    // Backfill: se o appointment tinha quantity_sessions > 1 e só 1 serviço, move o valor para o serviço
-    await queryRunner.query(`
-      UPDATE medical_record_services mrs
-      INNER JOIN appointments a ON a.id = mrs.appointment_id
-      INNER JOIN (
-        SELECT appointment_id
-        FROM medical_record_services
-        WHERE appointment_id IS NOT NULL
-        GROUP BY appointment_id
-        HAVING COUNT(*) = 1
-      ) single_service ON single_service.appointment_id = a.id
-      SET mrs.quantity_sessions = a.quantity_sessions
-      WHERE a.quantity_sessions > 1
-    `);
-
-    // Recalcula o total no appointment como soma dos serviços vinculados
-    await queryRunner.query(`
-      UPDATE appointments a
-      INNER JOIN (
-        SELECT appointment_id, COALESCE(SUM(quantity_sessions), 1) AS total_sessions
-        FROM medical_record_services
-        WHERE appointment_id IS NOT NULL
-        GROUP BY appointment_id
-      ) totals ON totals.appointment_id = a.id
-      SET a.quantity_sessions = totals.total_sessions
-    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

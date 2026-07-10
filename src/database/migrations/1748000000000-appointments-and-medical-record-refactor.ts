@@ -6,35 +6,10 @@ import {
   TableForeignKey,
 } from 'typeorm';
 
-const APPOINTMENT_STATUSES = new Set([
-  'created',
-  'scheduled',
-  'confirmed_schedule',
-  'in_progress',
-  'concluded',
-  'canceled',
-  'canceled_schedule',
-]);
-
-function mapTreatmentStatus(
-  oldStatus: string | null,
-  hasConclusion: boolean,
-): string {
-  if (hasConclusion || oldStatus === 'concluded') {
-    return 'finished';
-  }
-
-  if (oldStatus === 'in_progress') {
-    return 'in_progress';
-  }
-
-  if (oldStatus === 'canceled') {
-    return 'finished';
-  }
-
-  return 'pending';
-}
-
+/**
+ * Cria a tabela appointments e move o modelo de agendamento para fora do medical_record.
+ * Sem migração de dados (ambientes locais/produção ainda sem uso desse fluxo).
+ */
 export class AppointmentsAndMedicalRecordRefactor1748000000000
   implements MigrationInterface
 {
@@ -154,128 +129,18 @@ export class AppointmentsAndMedicalRecordRefactor1748000000000
     }
 
     const medicalRecordTable = await queryRunner.getTable('medical_record');
-    const hasStartDate = medicalRecordTable?.columns.some(
-      (column) => column.name === 'start_date',
-    );
+    const columnsToDrop = [
+      'start_date',
+      'end_date',
+      'confirmation_token',
+      'confirmed_at',
+      'reminder_sent_at',
+      'attendance_status',
+    ];
 
-    if (hasStartDate) {
-      const scheduledRecords: Array<{
-        id: number;
-        user_id: number;
-        start_date: Date;
-        end_date: Date;
-        status: string;
-        title: string | null;
-        total_value: string | null;
-        confirmation_token: string | null;
-        confirmed_at: Date | null;
-        reminder_sent_at: Date | null;
-        conclusion: string | null;
-      }> = await queryRunner.query(`
-        SELECT id, user_id, start_date, end_date, status, title, total_value,
-               confirmation_token, confirmed_at, reminder_sent_at, conclusion
-        FROM medical_record
-        WHERE start_date IS NOT NULL
-      `);
-
-      for (const record of scheduledRecords) {
-        const appointmentStatus = APPOINTMENT_STATUSES.has(record.status)
-          ? record.status
-          : 'created';
-
-        const existingAppointment = await queryRunner.query(
-          `SELECT id FROM appointments WHERE medical_record_id = ? AND start_date = ? LIMIT 1`,
-          [record.id, record.start_date],
-        );
-
-        let appointmentId = existingAppointment[0]?.id as number | undefined;
-
-        if (!appointmentId) {
-          const insertResult = await queryRunner.query(
-            `
-            INSERT INTO appointments (
-              medical_record_id, user_id, start_date, end_date, status,
-              quantity_sessions, title, total_value, confirmation_token,
-              confirmed_at, reminder_sent_at, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, NOW(), NOW())
-          `,
-            [
-              record.id,
-              record.user_id,
-              record.start_date,
-              record.end_date,
-              appointmentStatus,
-              record.title,
-              record.total_value,
-              record.confirmation_token,
-              record.confirmed_at,
-              record.reminder_sent_at,
-            ],
-          );
-
-          appointmentId =
-            insertResult.insertId ??
-            (
-              await queryRunner.query(
-                `SELECT id FROM appointments WHERE medical_record_id = ? AND start_date = ? ORDER BY id DESC LIMIT 1`,
-                [record.id, record.start_date],
-              )
-            )[0]?.id;
-        }
-
-        if (appointmentId) {
-          await queryRunner.query(
-            `UPDATE medical_record_services SET appointment_id = ? WHERE medical_record_id = ? AND appointment_id IS NULL`,
-            [appointmentId, record.id],
-          );
-        }
-
-        const treatmentStatus = mapTreatmentStatus(
-          record.status,
-          Boolean(record.conclusion?.trim()),
-        );
-
-        await queryRunner.query(
-          `UPDATE medical_record SET status = ? WHERE id = ?`,
-          [treatmentStatus, record.id],
-        );
-      }
-
-      const recordsWithoutSchedule: Array<{
-        id: number;
-        status: string;
-        conclusion: string | null;
-      }> = await queryRunner.query(`
-        SELECT id, status, conclusion
-        FROM medical_record
-        WHERE start_date IS NULL
-      `);
-
-      for (const record of recordsWithoutSchedule) {
-        const treatmentStatus = mapTreatmentStatus(
-          record.status,
-          Boolean(record.conclusion?.trim()),
-        );
-
-        await queryRunner.query(
-          `UPDATE medical_record SET status = ? WHERE id = ?`,
-          [treatmentStatus, record.id],
-        );
-      }
-
-      const columnsToDrop = [
-        'start_date',
-        'end_date',
-        'confirmation_token',
-        'confirmed_at',
-        'reminder_sent_at',
-        'attendance_status',
-      ];
-
-      for (const columnName of columnsToDrop) {
-        if (medicalRecordTable?.columns.some((column) => column.name === columnName)) {
-          await queryRunner.dropColumn('medical_record', columnName);
-        }
+    for (const columnName of columnsToDrop) {
+      if (medicalRecordTable?.columns.some((column) => column.name === columnName)) {
+        await queryRunner.dropColumn('medical_record', columnName);
       }
     }
   }
@@ -328,45 +193,6 @@ export class AppointmentsAndMedicalRecordRefactor1748000000000
           isNullable: true,
         }),
       );
-
-      const appointments: Array<{
-        medical_record_id: number;
-        start_date: Date;
-        end_date: Date;
-        status: string;
-        title: string | null;
-        total_value: string | null;
-        confirmation_token: string | null;
-        confirmed_at: Date | null;
-        reminder_sent_at: Date | null;
-      }> = await queryRunner.query(`
-        SELECT medical_record_id, start_date, end_date, status, title, total_value,
-               confirmation_token, confirmed_at, reminder_sent_at
-        FROM appointments
-        ORDER BY id ASC
-      `);
-
-      for (const appointment of appointments) {
-        await queryRunner.query(
-          `
-          UPDATE medical_record
-          SET start_date = ?, end_date = ?, status = ?, title = ?, total_value = ?,
-              confirmation_token = ?, confirmed_at = ?, reminder_sent_at = ?
-          WHERE id = ?
-        `,
-          [
-            appointment.start_date,
-            appointment.end_date,
-            appointment.status,
-            appointment.title,
-            appointment.total_value,
-            appointment.confirmation_token,
-            appointment.confirmed_at,
-            appointment.reminder_sent_at,
-            appointment.medical_record_id,
-          ],
-        );
-      }
     }
 
     const servicesTable = await queryRunner.getTable('medical_record_services');
