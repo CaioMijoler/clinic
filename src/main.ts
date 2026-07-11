@@ -18,7 +18,12 @@ async function createApp() {
     ),
   });
 
-  app.enableCors();
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,

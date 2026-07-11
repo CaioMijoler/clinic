@@ -1,6 +1,6 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, Not, Repository } from 'typeorm';
+import { Between, In, Repository } from 'typeorm';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { User } from '../user/entities/user.entity';
@@ -17,7 +17,26 @@ const DEFAULT_DASHBOARD_STATUSES = [
   AppointmentStatusEnum.CREATED,
   AppointmentStatusEnum.SCHEDULED,
   AppointmentStatusEnum.CONFIRMED_SCHEDULE,
+  AppointmentStatusEnum.IN_PROGRESS,
+  AppointmentStatusEnum.CONCLUDED,
+  AppointmentStatusEnum.CANCELED,
   AppointmentStatusEnum.CANCELED_SCHEDULE,
+];
+
+const CANCELED_DASHBOARD_STATUSES = [
+  AppointmentStatusEnum.CANCELED,
+  AppointmentStatusEnum.CANCELED_SCHEDULE,
+];
+
+const ACTIVE_DASHBOARD_STATUSES = [
+  AppointmentStatusEnum.CREATED,
+  AppointmentStatusEnum.SCHEDULED,
+  AppointmentStatusEnum.IN_PROGRESS,
+];
+
+const CONFIRMED_DASHBOARD_STATUSES = [
+  AppointmentStatusEnum.CONFIRMED_SCHEDULE,
+  AppointmentStatusEnum.CONCLUDED,
 ];
 
 @Injectable()
@@ -110,7 +129,11 @@ export class DashboardService {
         where: {
           userId,
           startDate: Between(startDate, endDate),
-          status: Not(In([AppointmentStatusEnum.CANCELED, AppointmentStatusEnum.CANCELED_SCHEDULE])),
+          status: In([
+            AppointmentStatusEnum.CREATED,
+            AppointmentStatusEnum.SCHEDULED,
+            AppointmentStatusEnum.IN_PROGRESS,
+          ]),
         },
       }),
 
@@ -118,7 +141,10 @@ export class DashboardService {
         where: {
           userId,
           startDate: Between(startDate, endDate),
-          status: AppointmentStatusEnum.CONFIRMED_SCHEDULE,
+          status: In([
+            AppointmentStatusEnum.CONFIRMED_SCHEDULE,
+            AppointmentStatusEnum.CONCLUDED,
+          ]),
         },
       }),
 
@@ -152,8 +178,8 @@ export class DashboardService {
 
     switch (period) {
       case DashboardPeriodEnum.WEEK:
-        startDate = startOfWeek(now);
-        endDate = endOfWeek(now);
+        startDate = startOfWeek(now, { weekStartsOn: 1 });
+        endDate = endOfWeek(now, { weekStartsOn: 1 });
         break;
       case DashboardPeriodEnum.MONTH:
         startDate = startOfMonth(now);
@@ -183,6 +209,32 @@ export class DashboardService {
         validStatuses.has(value),
       );
 
-    return parsedStatuses.length > 0 ? parsedStatuses : DEFAULT_DASHBOARD_STATUSES;
+    if (parsedStatuses.length === 0) {
+      return DEFAULT_DASHBOARD_STATUSES;
+    }
+
+    const hasCanceledFilter = parsedStatuses.some((value) =>
+      CANCELED_DASHBOARD_STATUSES.includes(value),
+    );
+    const hasConfirmedFilter = parsedStatuses.some((value) =>
+      CONFIRMED_DASHBOARD_STATUSES.includes(value),
+    );
+    const hasActiveFilter = parsedStatuses.some((value) =>
+      ACTIVE_DASHBOARD_STATUSES.includes(value),
+    );
+
+    if (hasCanceledFilter && !hasConfirmedFilter && !hasActiveFilter) {
+      return [...CANCELED_DASHBOARD_STATUSES];
+    }
+
+    if (hasConfirmedFilter && !hasCanceledFilter && !hasActiveFilter) {
+      return [...CONFIRMED_DASHBOARD_STATUSES];
+    }
+
+    if (hasActiveFilter && !hasCanceledFilter && !hasConfirmedFilter) {
+      return [...ACTIVE_DASHBOARD_STATUSES];
+    }
+
+    return parsedStatuses;
   }
 }
