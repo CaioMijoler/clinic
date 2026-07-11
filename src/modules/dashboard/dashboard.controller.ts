@@ -10,17 +10,16 @@ import { IPaginate } from '../../utils/paginate';
 
 @ApiTags('dashboard')
 @Controller('v1/dashboard')
+@ApiBearerAuth()
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('stats')
-  @ApiBearerAuth()
   getStatistics(@Req() req: Request, @Query() filter: DashboardFilterDto): Promise<TDashboardStatsResponse> {
     return this.dashboardService.getStatistics(req?.user, filter);
   }
 
   @Get('medical-records')
-  @ApiBearerAuth()
   getMedicalRecords(
     @Req() req: Request,
     @Query() filter: DashboardMedicalRecordFilterDto,

@@ -24,6 +24,7 @@ import { CalendarReminderService } from './services/calendar-reminder.service';
 
 @ApiTags('calendar')
 @Controller('v1/calendar')
+@ApiBearerAuth()
 export class CalendarController {
   constructor(
     private readonly calendarService: CalendarService,
