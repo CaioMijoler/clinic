@@ -32,7 +32,7 @@ export default () => {
     },
     auth: {
       provider: process.env.AUTH_PROVIDER ?? 'local',
-      tokenTtl: process.env.AUTH_TOKEN_TTL || 86400,
+      tokenTtl: Number(process.env.AUTH_TOKEN_TTL || 86400),
     },
     supabase: {
       url: process.env.SUPABASE_URL,

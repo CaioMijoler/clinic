@@ -41,7 +41,7 @@ export class AuthService {
       }
 
       const accessToken = data.session.access_token;
-      const ttl = this.configService.get<number>('auth.tokenTtl');
+      const ttl = Number(this.configService.get<number | string>('auth.tokenTtl') ?? 86400);
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...userData } = user;
@@ -120,7 +120,7 @@ export class AuthService {
       }
 
       const { password, ...userData } = user;
-      const ttl = this.configService.get<number>('auth.tokenTtl');
+      const ttl = Number(this.configService.get<number | string>('auth.tokenTtl') ?? 86400);
 
       const authResponse: AuthResponseDto = {
         id: userData.id,
@@ -154,7 +154,16 @@ export class AuthService {
   }
 
   private extractTokenFromHeader(accessToken: string): string {
-    const [type, token] = accessToken?.split(' ') ?? [];
-    return type === 'Bearer' ? token : '';
+    if (!accessToken?.trim()) {
+      return '';
+    }
+
+    const parts = accessToken.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return parts[0];
+    }
+
+    const [type, token] = parts;
+    return type.toLowerCase() === 'bearer' ? token : '';
   }
 }

@@ -11,15 +11,21 @@ export class AuthMiddleware implements NestMiddleware {
   constructor(private authService: AuthService) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
-    try {
-      const user = await this.authService.verifyToken(
-        req.headers.authorization,
-      );
+    const authorization = req.headers.authorization;
 
+    if (!authorization) {
+      throw new UnauthorizedException('Token não informado.');
+    }
+
+    try {
+      const user = await this.authService.verifyToken(authorization);
       req.user = user;
       next();
     } catch (err) {
-      throw new UnauthorizedException(`Usuário não autorizado.`);
+      if (err instanceof UnauthorizedException) {
+        throw err;
+      }
+      throw new UnauthorizedException('Usuário não autorizado.');
     }
   }
 }
