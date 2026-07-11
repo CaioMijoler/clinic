@@ -49,8 +49,8 @@ Módulo central que **orquestra** a criação de cliente, patologias, tratamento
 - `clinicalExam` — Exame clínico inserido pelo médico
 - `completeClinicalExam` — Conclusão do exame clínico
 - `conclusion` — Conclusão do prontuário
-- `status` — CREATED / SCHEDULED / CANCELED / CANCELED_SCHEDULE / CONFIRMED_SCHEDULE / IN_PROGRESS / CONCLUDED
-- `title`, `startDate`, `endDate` — Dados do agendamento
+- `status` — `pending` / `in_progress` / `finished` / `canceled` (soft delete)
+- `title`, `totalValue` — Metadados do tratamento
 
 ### Relações do Prontuário
 - `client` → paciente associado (ManyToOne)
@@ -59,6 +59,13 @@ Módulo central que **orquestra** a criação de cliente, patologias, tratamento
 - `feedbacks[]` → feedbacks de tratamento (OneToMany)
 - `pathologies[]` → patologias associadas (ManyToMany via pivô)
 - `questions[]` → perguntas de psicanálise associadas (ManyToMany via pivô)
+- `appointments[]` → agendamentos vinculados (OneToMany)
+
+### Cancelamento (soft delete)
+`DELETE /v1/medical-record/:id`:
+1. Define `medical_record.status = canceled`
+2. Cancela agendamentos ativos vinculados (`appointments.status = canceled`, `canceled_by = admin`)
+3. Agendamentos cujo **prontuário** está `canceled` **não aparecem** na listagem de calendário (`GET /calendar`). Cancelamentos de agendamento (cliente/admin) **continuam** visíveis no calendário. Prontuários cancelados **continuam** na listagem de prontuário.
 
 ### Criação (transacional)
 O `create` aceita um único POST com todos os dados aninhados:
@@ -113,7 +120,7 @@ O agendamento pode ser criado a partir de um `MedicalRecord` existente (via `med
 | Método | Rota | Auth | Descrição |
 |---|---|---|---|
 | `POST` | `/v1/calendar` | ✅ Bearer | Criar agendamento (`appointments`) + serviços; status inicial `created` |
-| `GET` | `/v1/calendar` | ✅ Bearer | Listar eventos por período |
+| `GET` | `/v1/calendar` | ✅ Bearer | Listar eventos por período (inclui cancelados; omite só se o prontuário estiver `canceled`) |
 | `DELETE` | `/v1/calendar/:id` | ✅ Bearer | Cancelar/excluir agendamento conforme status |
 | `POST` | `/v1/calendar/:id/confirm-presence` | ✅ Bearer | Profissional confirma presença (status → `confirmed_schedule`) |
 | `POST` | `/v1/calendar/:id/mark-attendance` | ✅ Bearer | Registrar comparecimento no dia (`attended`) |
@@ -128,12 +135,17 @@ Disponível apenas quando o status do agendamento é `confirmed_schedule` ou `in
 | Ação do profissional | Body | Efeito |
 |---|---|---|
 | **Compareceu** | `{ "attended": true }` | Mantém o status atual; `attended = true`. O fluxo do atendimento segue normalmente. |
-| **Faltou** | `{ "attended": false }` | `attended = false` **e** cancela o agendamento (`status = canceled_schedule`). Conta como falta nas sessões realizadas. |
+| **Faltou** | `{ "attended": false }` | `attended = false`, cancela o agendamento (`status = canceled_schedule`, `canceled_by = admin`). Conta como falta nas sessões realizadas. |
 
 Campo `appointments.attended` (nullable):
 - `null` — ainda não informado
 - `true` — compareceu
 - `false` — faltou (agendamento cancelado)
+
+Campo `appointments.canceled_by` (nullable):
+- `client` — paciente cancelou pelo link
+- `admin` — profissional/admin cancelou (calendário, falta ou soft-delete do prontuário)
+- `null` — não cancelado
 
 ### Services
 - **`CalendarService`** — CRUD de agendamentos + confirmação de presença + comparecimento no dia

@@ -44,6 +44,15 @@ export class Appointment {
   @Column({ type: 'boolean', nullable: true, default: null })
   attended: boolean | null;
 
+  /**
+   * Quem cancelou o agendamento.
+   * - `client` → paciente (link de confirmação)
+   * - `admin`  → profissional/admin (calendário ou falta)
+   * - `null`   → não cancelado
+   */
+  @Column({ name: 'canceled_by', type: 'varchar', length: 50, nullable: true })
+  canceledBy: string | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   title: string | null;
 

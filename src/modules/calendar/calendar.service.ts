@@ -14,6 +14,7 @@ import { User } from '../user/entities/user.entity';
 import { MedicalRecord } from '../medical-record/entities/medical-record.entity';
 import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
 import { AppointmentStatusEnum } from '../../utils/enum/appointment-status.enum';
+import { AppointmentCanceledByEnum } from '../../utils/enum/appointment-canceled-by.enum';
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { Client } from '../clients/entities/client.entity';
 import { ResponseMedicalRecordResumeDto } from './dto/response-medical-record-resume.dto';
@@ -244,7 +245,12 @@ export class CalendarService {
         order: { startDate: 'ASC' },
       });
 
-      return appointments.map((appointment) => this.mapToEventDto(appointment));
+      return appointments
+        .filter(
+          (appointment) =>
+            appointment.medicalRecord?.status !== MedicalRecordStatusEnum.CANCELED,
+        )
+        .map((appointment) => this.mapToEventDto(appointment));
     } catch (error) {
       const message = 'Ocorreu um erro ao buscar os eventos.';
       if (error instanceof HttpException) throw error;
@@ -290,6 +296,7 @@ export class CalendarService {
 
       await this.appointmentRepository.update(appointment.id, {
         status: canceledStatus,
+        canceledBy: AppointmentCanceledByEnum.ADMIN,
       });
 
       return { success: true, id: appointment.id };
@@ -405,6 +412,9 @@ export class CalendarService {
       await this.appointmentRepository.update(appointment.id, {
         attended,
         status: nextStatus,
+        ...(attended
+          ? {}
+          : { canceledBy: AppointmentCanceledByEnum.ADMIN }),
       });
 
       const clientName =
@@ -583,6 +593,7 @@ export class CalendarService {
       }
 
       appointment.status = AppointmentStatusEnum.CANCELED_SCHEDULE;
+      appointment.canceledBy = AppointmentCanceledByEnum.CLIENT;
 
       await this.appointmentRepository.save(appointment);
 
@@ -727,6 +738,7 @@ export class CalendarService {
       },
       status: appointment.status,
       attended: appointment.attended ?? null,
+      canceledBy: appointment.canceledBy ?? null,
       quantitySessions,
     };
   }

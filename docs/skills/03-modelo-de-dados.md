@@ -163,6 +163,7 @@ Agendamentos ficam na tabela `appointments`, separados do prontuário (`medical_
 | status | varchar | Enum de agendamento (ver abaixo) |
 | quantity_sessions | int | Soma das sessões dos serviços deste agendamento (default 1) |
 | attended | boolean nullable | Comparecimento no dia: `null` não informado, `true` compareceu, `false` faltou (cancela) |
+| canceled_by | varchar(50) nullable | Quem cancelou: `client` (paciente) ou `admin` (profissional). `null` se não cancelado |
 | title | varchar(255) | Título |
 | total_value | decimal | Valor total do agendamento |
 | confirmation_token | varchar(255) | Token de confirmação WhatsApp |
@@ -190,7 +191,17 @@ enum AppointmentStatusEnum {
 1. Agendamento em `confirmed_schedule` ou `in_progress`.
 2. Profissional registra no calendário:
    - **Compareceu** → `attended = true`, status inalterado.
-   - **Faltou** → `attended = false` e `status = canceled_schedule`.
+   - **Faltou** → `attended = false`, `status = canceled_schedule` e `canceled_by = admin`.
+
+### Quem cancelou (`canceled_by`)
+
+| Valor | Origem |
+|---|---|
+| `client` | Paciente cancelou pelo link de confirmação |
+| `admin` | Profissional cancelou no calendário, registrou falta, ou soft-delete do prontuário |
+| `null` | Agendamento não cancelado |
+
+Agendamentos cancelados **aparecem** no calendário (com status e `canceled_by`). Só ficam ocultos quando o **prontuário** vinculado está `canceled`.
 
 Sessões realizadas do tratamento contam apenas agendamentos com `attended = true`.
 
@@ -210,8 +221,18 @@ enum MedicalRecordStatusEnum {
   PENDING = 'pending',
   IN_PROGRESS = 'in_progress',
   FINISHED = 'finished',
+  CANCELED = 'canceled', // Soft delete — continua na listagem de prontuários; oculta agendamentos no calendário
 }
 ```
+
+| Status | Significado |
+|---|---|
+| `pending` | Prontuário criado, tratamento ainda não iniciado |
+| `in_progress` | Tratamento em andamento |
+| `finished` | Tratamento finalizado |
+| `canceled` | Prontuário cancelado (DELETE soft). Continua na listagem de prontuários; **não** aparece na listagem de agendamentos |
+
+`DELETE /v1/medical-record/:id` define `status = canceled` e cancela agendamentos ativos vinculados (`appointments.status = canceled`).
 
 ## Migrations Existentes (ordem cronológica)
 

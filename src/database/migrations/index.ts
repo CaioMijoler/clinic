@@ -19,6 +19,7 @@ import { AppointmentsAndMedicalRecordRefactor1748000000000 } from './17480000000
 import { DropAttendanceStatusFromMedicalRecord1748000000002 } from './1748000000002-drop-attendance-status-from-medical-record';
 import { ServiceQuantitySessionsAndAppointmentAttended1748000000003 } from './1748000000003-service-quantity-sessions-and-appointment-attended';
 import { EnsureNotificationUserId1748000000004 } from './1748000000004-ensure-notification-user-id';
+import { AppointmentCanceledBy1748000000005 } from './1748000000005-appointment-canceled-by';
 
 /**
  * Lista explícita — necessária no Vercel/serverless.
@@ -46,4 +47,5 @@ export const migrations = [
   DropAttendanceStatusFromMedicalRecord1748000000002,
   ServiceQuantitySessionsAndAppointmentAttended1748000000003,
   EnsureNotificationUserId1748000000004,
+  AppointmentCanceledBy1748000000005,
 ];

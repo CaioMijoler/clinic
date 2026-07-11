@@ -7,6 +7,7 @@ export async function findAllWithQueryBuilder<T>(
   repository: Repository<T>,
   queryParams: FilterDto,
   alias: string,
+  options?: { excludeStatuses?: string[] },
 ): Promise<IPaginate<T> | T[]> {
   const {
     current_page = 1,
@@ -17,6 +18,12 @@ export async function findAllWithQueryBuilder<T>(
   const queryBuilder = repository.createQueryBuilder(alias);
 
   queryBuild(queryBuilder, queryParams, alias);
+
+  if (options?.excludeStatuses?.length) {
+    queryBuilder.andWhere(`${alias}.status NOT IN (:...excludeStatuses)`, {
+      excludeStatuses: options.excludeStatuses,
+    });
+  }
 
   if (paginate) {
     const [response, total] = await paginateQuery(

@@ -12,7 +12,7 @@ import {
 import { UpdateMedicalRecordDto } from './dto/update-medical-record.dto';
 import { User } from '../user/entities/user.entity';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { MedicalRecord } from './entities/medical-record.entity';
 import { Client } from '../clients/entities/client.entity';
 import { CreateClientDto } from '../clients/dto/create-client.dto';
@@ -22,6 +22,8 @@ import { findAllWithQueryBuilder } from '../../utils/query-builder';
 import { FilterDto } from '../../utils/filter-dto';
 import { IPaginate } from '../../utils/paginate';
 import { MedicalRecordStatusEnum } from '../../utils/enum/medical-record.enum';
+import { AppointmentStatusEnum } from '../../utils/enum/appointment-status.enum';
+import { AppointmentCanceledByEnum } from '../../utils/enum/appointment-canceled-by.enum';
 import { CreateMedicalRecordPathologyDto } from './dto/medical-record-pathologies/create-medical-record-pathologies.dto';
 import { MedicalRecordPathologies } from './entities/medical-record-pathologies.entity';
 import { CreateMedicalRecordQuestionsDto } from './dto/medical-record-questions/create-medical-record-questions.dto';
@@ -34,6 +36,13 @@ import { MedicalRecordService as MedicalRecordServiceEntity } from './entities/m
 import { CreateMedicalRecordServiceItemDto } from './dto/medical-record-services/create-medical-record-service.dto';
 import { Service } from '../services/entities/service.entity';
 import { Appointment } from '../appointments/entities/appointment.entity';
+
+const ACTIVE_APPOINTMENT_STATUSES = [
+  AppointmentStatusEnum.CREATED,
+  AppointmentStatusEnum.SCHEDULED,
+  AppointmentStatusEnum.CONFIRMED_SCHEDULE,
+  AppointmentStatusEnum.IN_PROGRESS,
+] as const;
 
 @Injectable()
 export class MedicalRecordService {
@@ -411,11 +420,31 @@ export class MedicalRecordService {
         );
       }
 
-      await this.medicalRecordRepository.update(medicalRecord.id, {
-        status: MedicalRecordStatusEnum.FINISHED,
+      if (medicalRecord.status === MedicalRecordStatusEnum.CANCELED) {
+        return { success: true, id: medicalRecord.id };
+      }
+
+      await this.dataSource.transaction(async (manager) => {
+        await manager.update(MedicalRecord, medicalRecord.id, {
+          status: MedicalRecordStatusEnum.CANCELED,
+        });
+
+        await manager.update(
+          Appointment,
+          {
+            medicalRecordId: medicalRecord.id,
+            status: In([...ACTIVE_APPOINTMENT_STATUSES]),
+          },
+          {
+            status: AppointmentStatusEnum.CANCELED,
+            canceledBy: AppointmentCanceledByEnum.ADMIN,
+          },
+        );
       });
+
+      return { success: true, id: medicalRecord.id };
     } catch (error) {
-      const message = 'Ocorreu um erro ao cancelar o prontuário o cliente.';
+      const message = 'Ocorreu um erro ao cancelar o prontuário.';
 
       if (error instanceof HttpException) {
         throw error;

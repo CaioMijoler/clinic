@@ -3,7 +3,12 @@ import { getRepositoryToken, getDataSourceToken } from '@nestjs/typeorm';
 import { BadRequestException } from '@nestjs/common';
 import { MedicalRecordService } from '../../src/modules/medical-record/medical-record.service';
 import { MedicalRecord } from '../../src/modules/medical-record/entities/medical-record.entity';
+import { MedicalRecordDocument } from '../../src/modules/medical-record/entities/medical-record-documents.entity';
+import { Appointment } from '../../src/modules/appointments/entities/appointment.entity';
 import { FilterDto } from '../../src/utils/filter-dto';
+import { MedicalRecordStatusEnum } from '../../src/utils/enum/medical-record.enum';
+import { AppointmentStatusEnum } from '../../src/utils/enum/appointment-status.enum';
+import { AppointmentCanceledByEnum } from '../../src/utils/enum/appointment-canceled-by.enum';
 import * as queryBuilderUtil from '../../src/utils/query-builder';
 import {
   makeMedicalRecord,
@@ -22,20 +27,73 @@ const mockRepository = {
   findOne: jest.fn(),
   save: jest.fn(),
   find: jest.fn(),
+  update: jest.fn(),
   createQueryBuilder: jest.fn(),
+};
+
+const mockDocumentRepository = {
+  findOne: jest.fn(),
+  find: jest.fn(),
+};
+
+const mockAppointmentRepository = {
+  findOne: jest.fn(),
+  find: jest.fn(),
+  update: jest.fn(),
+  createQueryBuilder: jest.fn().mockReturnValue({
+    select: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getRawOne: jest.fn().mockResolvedValue({ completed: '0' }),
+  }),
 };
 
 // ─── Mock do DataSource ───────────────────────────────────────────────────────
 const mockDataSource = {
   transaction: jest.fn(),
+  getRepository: jest.fn().mockReturnValue({
+    createQueryBuilder: jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getRawOne: jest.fn().mockResolvedValue({ total: '0', completed: '0' }),
+    }),
+  }),
   manager: {
     findOne: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
     merge: jest.fn(),
     remove: jest.fn(),
+    update: jest.fn(),
   },
 };
+
+async function createServiceModule(): Promise<MedicalRecordService> {
+  const module: TestingModule = await Test.createTestingModule({
+    providers: [
+      MedicalRecordService,
+      {
+        provide: getRepositoryToken(MedicalRecord),
+        useValue: mockRepository,
+      },
+      {
+        provide: getRepositoryToken(MedicalRecordDocument),
+        useValue: mockDocumentRepository,
+      },
+      {
+        provide: getRepositoryToken(Appointment),
+        useValue: mockAppointmentRepository,
+      },
+      {
+        provide: getDataSourceToken(),
+        useValue: mockDataSource,
+      },
+    ],
+  }).compile();
+
+  return module.get<MedicalRecordService>(MedicalRecordService);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -43,21 +101,7 @@ describe('MedicalRecordService — findByClient', () => {
   let service: MedicalRecordService;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        MedicalRecordService,
-        {
-          provide: getRepositoryToken(MedicalRecord),
-          useValue: mockRepository,
-        },
-        {
-          provide: getDataSourceToken(),
-          useValue: mockDataSource,
-        },
-      ],
-    }).compile();
-
-    service = module.get<MedicalRecordService>(MedicalRecordService);
+    service = await createServiceModule();
     jest.clearAllMocks();
   });
 
@@ -77,7 +121,11 @@ describe('MedicalRecordService — findByClient', () => {
         }),
         'mr',
       );
-      expect(result).toEqual(records);
+      expect(result).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ clientId: 1 }),
+        ]),
+      );
       expect((result as MedicalRecord[]).length).toBe(3);
     });
   });
@@ -174,27 +222,59 @@ describe('MedicalRecordService — findByClient', () => {
   });
 });
 
+describe('MedicalRecordService — remove (soft cancel)', () => {
+  let service: MedicalRecordService;
+
+  beforeEach(async () => {
+    service = await createServiceModule();
+    jest.clearAllMocks();
+  });
+
+  it('deve marcar prontuário como canceled e cancelar agendamentos ativos', async () => {
+    mockRepository.findOne.mockResolvedValueOnce(
+      makeMedicalRecord({ id: 10, status: MedicalRecordStatusEnum.PENDING }),
+    );
+    mockDataSource.transaction.mockImplementation(async (cb) =>
+      cb(mockDataSource.manager),
+    );
+
+    const result = await service.remove(10);
+
+    expect(mockDataSource.manager.update).toHaveBeenCalledWith(
+      MedicalRecord,
+      10,
+      { status: MedicalRecordStatusEnum.CANCELED },
+    );
+    expect(mockDataSource.manager.update).toHaveBeenCalledWith(
+      Appointment,
+      expect.objectContaining({ medicalRecordId: 10 }),
+      {
+        status: AppointmentStatusEnum.CANCELED,
+        canceledBy: AppointmentCanceledByEnum.ADMIN,
+      },
+    );
+    expect(result).toEqual({ success: true, id: 10 });
+  });
+
+  it('não altera novamente se já estiver canceled', async () => {
+    mockRepository.findOne.mockResolvedValueOnce(
+      makeMedicalRecord({ id: 11, status: MedicalRecordStatusEnum.CANCELED }),
+    );
+
+    const result = await service.remove(11);
+
+    expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    expect(result).toEqual({ success: true, id: 11 });
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('MedicalRecordController — GET /v1/medical-records/client/:clientId', () => {
   let service: MedicalRecordService;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        MedicalRecordService,
-        {
-          provide: getRepositoryToken(MedicalRecord),
-          useValue: mockRepository,
-        },
-        {
-          provide: getDataSourceToken(),
-          useValue: mockDataSource,
-        },
-      ],
-    }).compile();
-
-    service = module.get<MedicalRecordService>(MedicalRecordService);
+    service = await createServiceModule();
     jest.clearAllMocks();
   });
 
