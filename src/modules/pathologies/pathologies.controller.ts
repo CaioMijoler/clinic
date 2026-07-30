@@ -7,7 +7,9 @@ import {
   Param,
   Delete,
   Query,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { PathologiesService } from './pathologies.service';
 import {
   CreatePathologyDto,
@@ -27,32 +29,48 @@ export class PathologiesController {
   @Post()
   async create(
     @Body() createPathologyDto: CreatePathologyDto,
+    @Req() req: Request,
   ): Promise<ResponsePathologyDto> {
-    return await this.pathologiesService.create(createPathologyDto);
+    return await this.pathologiesService.create(
+      createPathologyDto,
+      req?.user as any,
+    );
   }
 
   @Get()
   async findAll(
     @Query() queryParams: FilterDto,
+    @Req() req: Request,
   ): Promise<IPaginate<ResponsePathologyDto> | ResponsePathologyDto[]> {
-    return await this.pathologiesService.findAll(queryParams);
+    return await this.pathologiesService.findAll(
+      queryParams,
+      req?.user as any,
+    );
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: number): Promise<ResponsePathologyDto> {
-    return await this.pathologiesService.findOne(id);
+  async findOne(
+    @Param('id') id: number,
+    @Req() req: Request,
+  ): Promise<ResponsePathologyDto> {
+    return await this.pathologiesService.findOne(id, req?.user as any);
   }
 
   @Put(':id')
   async update(
     @Param('id') id: number,
     @Body() updatePathologyDto: UpdatePathologyDto,
+    @Req() req: Request,
   ): Promise<ResponsePathologyDto> {
-    return await this.pathologiesService.update(id, updatePathologyDto);
+    return await this.pathologiesService.update(
+      id,
+      updatePathologyDto,
+      req?.user as any,
+    );
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: number) {
-    return await this.pathologiesService.remove(id);
+  async remove(@Param('id') id: number, @Req() req: Request) {
+    return await this.pathologiesService.remove(id, req?.user as any);
   }
 }

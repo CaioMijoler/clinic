@@ -22,22 +22,18 @@ Armazena os profissionais de saúde e usuários do sistema.
 
 ---
 
-### `client`
+### `clients`
 Armazena as informações dos pacientes.
 
 | Campo | Tipo | Descrição |
 | :--- | :--- | :--- |
 | `id` | `int` | Chave primária. |
 | `name` | `varchar(255)` | Nome completo. |
-| `email` | `varchar(255)` | Email (único). |
-| `phone` | `varchar(255)` | Telefone. |
-| `cpf` | `varchar(255)` | CPF. |
-| `birthDate` | `date` | Data de nascimento. |
-| `gender` | `varchar(255)` | Gênero. |
-| `profession` | `varchar(255)` | Profissão. |
-| `indication` | `varchar(255)` | Quem indicou. |
-| `status` | `boolean` | Ativo/Inativo. |
-| `user_id` | `int` | Profissional responsável (Relacionamento com `user`). |
+| `document` | `varchar(20)` | CPF/CNPJ. |
+| `ie_rg` | `varchar(20)` | Inscrição estadual / RG. |
+| `email` | `varchar(255)` | Email. |
+| `telephone` | `varchar(255)` | Telefone. |
+| `user_id` | `int` (nullable) | Profissional responsável (FK → `users.id`, `ON DELETE SET NULL`). |
 | `created_at` | `timestamp` | Data de criação. |
 | `updated_at` | `timestamp` | Data de atualização. |
 
@@ -88,8 +84,9 @@ Armazena os tratamentos prescritos.
 | Campo | Tipo | Descrição |
 | :--- | :--- | :--- |
 | `id` | `int` | Chave primária. |
-| `description` | `text` | Descrição do tratamento. |
+| `description` | `varchar(255)` | Descrição do tratamento. |
 | `medical_record_id` | `int` | ID do prontuário associado. |
+| `user_id` | `int` (nullable) | Profissional responsável (FK → `users.id`, `ON DELETE SET NULL`). |
 | `created_at` | `timestamp` | Data de criação. |
 | `updated_at` | `timestamp` | Data de atualização. |
 
@@ -108,8 +105,31 @@ Armazena o feedback dos pacientes.
 
 ---
 
-### `question` e `pathology`
-Tabelas base para perguntas de anamnese e patologias comuns.
+### `questions`
+Tabela base para perguntas de anamnese.
+
+| Campo | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id` | `int` | Chave primária. |
+| `name` | `varchar(255)` | Pergunta. |
+| `response` | `varchar(500)` | Resposta padrão. |
+| `user_id` | `int` (nullable) | Profissional dono do registro (FK → `users.id`, `ON DELETE SET NULL`). |
+| `created_at` | `timestamp` | Data de criação. |
+| `updated_at` | `timestamp` | Data de atualização. |
+
+---
+
+### `pathologies`
+Tabela base para patologias comuns.
+
+| Campo | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id` | `int` | Chave primária. |
+| `code` | `varchar(120)` | Código (ex.: CID). |
+| `description` | `varchar(255)` | Descrição da patologia. |
+| `user_id` | `int` (nullable) | Profissional dono do registro (FK → `users.id`, `ON DELETE SET NULL`). |
+| `created_at` | `timestamp` | Data de criação. |
+| `updated_at` | `timestamp` | Data de atualização. |
 
 ---
 

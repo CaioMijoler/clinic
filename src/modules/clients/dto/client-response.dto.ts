@@ -20,6 +20,13 @@ export class ClientResponseDto {
   @ApiProperty()
   ieRg: string;
 
+  @ApiProperty({
+    example: 1,
+    nullable: true,
+    description: 'Profissional responsável pelo cliente.',
+  })
+  userId?: number;
+
   @ApiProperty({ example: '2021-12-01T23:59:59.000Z' })
   createdAt: string;
 

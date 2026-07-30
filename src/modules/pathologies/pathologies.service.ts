@@ -15,6 +15,7 @@ import { Pathology } from './entities/pathology.entity';
 import { findAllWithQueryBuilder } from '../../utils/query-builder';
 import { FilterDto } from '../../utils/filter-dto';
 import { IPaginate } from '../../utils/paginate';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class PathologiesService {
@@ -25,9 +26,13 @@ export class PathologiesService {
 
   async create(
     createPathologyDto: CreatePathologyDto,
+    user: User,
   ): Promise<ResponsePathologyDto> {
     try {
-      return await this.pathologyRepository.save(createPathologyDto);
+      return await this.pathologyRepository.save({
+        ...createPathologyDto,
+        userId: user.id,
+      });
     } catch (error: any) {
       const message = 'Ocorreu um erro ao criar a patologia.';
 
@@ -43,12 +48,14 @@ export class PathologiesService {
 
   async findAll(
     queryParams: FilterDto,
+    user: User,
   ): Promise<IPaginate<ResponsePathologyDto> | ResponsePathologyDto[]> {
     try {
       return findAllWithQueryBuilder<Pathology>(
         this.pathologyRepository,
         queryParams,
         'p',
+        { userId: user.id },
       );
     } catch (error: any) {
       const message = 'Ocorreu um erro ao buscar as patologias.';
@@ -57,17 +64,20 @@ export class PathologiesService {
     }
   }
 
-  async findOne(id: number): Promise<ResponsePathologyDto> {
-    return await this.pathologyRepository.findOne({ where: { id } });
+  async findOne(id: number, user: User): Promise<ResponsePathologyDto> {
+    return await this.pathologyRepository.findOne({
+      where: { id, userId: user.id },
+    });
   }
 
   async update(
     id: number,
     updatePathologyDto: UpdatePathologyDto,
+    user: User,
   ): Promise<ResponsePathologyDto> {
     try {
       let pathology = await this.pathologyRepository.findOne({
-        where: { id },
+        where: { id, userId: user.id },
       });
 
       if (!pathology) {
@@ -93,10 +103,10 @@ export class PathologiesService {
     }
   }
 
-  async remove(id: number) {
+  async remove(id: number, user: User) {
     try {
       const pathology = await this.pathologyRepository.findOne({
-        where: { id },
+        where: { id, userId: user.id },
       });
 
       if (!pathology) {

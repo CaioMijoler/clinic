@@ -15,6 +15,7 @@ import { Question } from './entities/question.entity';
 import { FilterDto } from '../../utils/filter-dto';
 import { findAllWithQueryBuilder } from '../../utils/query-builder';
 import { IPaginate } from '../../utils/paginate';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class QuestionsService {
@@ -25,9 +26,13 @@ export class QuestionsService {
 
   async create(
     createQuestionDto: CreateQuestionDto,
+    user: User,
   ): Promise<ResponseQuestionDto> {
     try {
-      return await this.questionRepository.save(createQuestionDto);
+      return await this.questionRepository.save({
+        ...createQuestionDto,
+        userId: user.id,
+      });
     } catch (error: any) {
       const message = 'Ocorreu um erro ao criar a questão.';
 
@@ -43,12 +48,14 @@ export class QuestionsService {
 
   async findAll(
     queryParams: FilterDto,
+    user: User,
   ): Promise<IPaginate<ResponseQuestionDto> | ResponseQuestionDto[]> {
     try {
       const data = await findAllWithQueryBuilder<Question>(
         this.questionRepository,
         queryParams,
         'quest',
+        { userId: user.id },
       );
       return data as IPaginate<ResponseQuestionDto> | ResponseQuestionDto[];
     } catch (error: any) {
@@ -58,17 +65,20 @@ export class QuestionsService {
     }
   }
 
-  async findOne(id: number): Promise<ResponseQuestionDto> {
-    return await this.questionRepository.findOne({ where: { id } });
+  async findOne(id: number, user: User): Promise<ResponseQuestionDto> {
+    return await this.questionRepository.findOne({
+      where: { id, userId: user.id },
+    });
   }
 
   async update(
     id: number,
     updateQuestionDto: UpdateQuestionDto,
+    user: User,
   ): Promise<ResponseQuestionDto> {
     try {
       let question = await this.questionRepository.findOne({
-        where: { id },
+        where: { id, userId: user.id },
       });
 
       if (!question) {
@@ -94,10 +104,10 @@ export class QuestionsService {
     }
   }
 
-  async remove(id: number) {
+  async remove(id: number, user: User) {
     try {
       const question = await this.questionRepository.findOne({
-        where: { id },
+        where: { id, userId: user.id },
       });
 
       if (!question) {

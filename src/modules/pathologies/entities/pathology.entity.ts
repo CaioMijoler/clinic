@@ -4,11 +4,14 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToMany,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { User } from '../../user/entities/user.entity';
 
 @Entity('pathologies')
 export class Pathology {
@@ -29,6 +32,13 @@ export class Pathology {
   })
   description: string;
 
+  @Column({
+    name: 'user_id',
+    type: 'int',
+    nullable: true,
+  })
+  userId?: number;
+
   @CreateDateColumn({
     name: 'created_at',
   })
@@ -47,4 +57,8 @@ export class Pathology {
 
   @ManyToMany(() => MedicalRecord, (medicalRecord) => medicalRecord.pathologies)
   medicalRecords: MedicalRecord[];
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'user_id' })
+  user?: User;
 }

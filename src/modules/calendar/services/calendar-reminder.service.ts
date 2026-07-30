@@ -32,7 +32,8 @@ export class CalendarReminderService {
 
   async sendCreationConfirmation(appointmentId: number): Promise<void> {
     try {
-      const appointment = await this.findAppointmentWithRelations(appointmentId);
+      const appointment =
+        await this.findAppointmentWithRelations(appointmentId);
 
       if (!appointment) {
         this.logger.warn(
@@ -187,85 +188,6 @@ export class CalendarReminderService {
     );
   }
 
-  async sendProfessionalAppointmentCanceledSilently(
-    appointmentId: number,
-  ): Promise<void> {
-    await this.trySendProfessionalNotificationSilently(
-      appointmentId,
-      WHATSAPP_PROFESSIONAL_CANCEL_TEMPLATE,
-      'Cancelamento de agendamento enviado ao profissional',
-    );
-  }
-
-  async sendProfessionalAppointmentConfirmedSilently(
-    appointmentId: number,
-  ): Promise<void> {
-    await this.trySendProfessionalNotificationSilently(
-      appointmentId,
-      WHATSAPP_PROFESSIONAL_CONFIRM_TEMPLATE,
-      'Confirmação de agendamento enviada ao profissional',
-    );
-  }
-
-  private async trySendProfessionalNotificationSilently(
-    appointmentId: number,
-    templateName: string,
-    successMessage: string,
-  ): Promise<void> {
-    try {
-      const appointment = await this.findAppointmentWithRelations(appointmentId);
-
-      if (!appointment) {
-        this.logger.warn(
-          `WhatsApp ${templateName}: agendamento ${appointmentId} não encontrado — notificação ignorada`,
-        );
-        return;
-      }
-
-      const skipReason = this.getProfessionalNotificationSkipReason(appointment);
-
-      if (skipReason) {
-        this.logger.warn(
-          `WhatsApp ${templateName}: consulta #${appointmentId} — ${skipReason}`,
-        );
-        return;
-      }
-
-      await this.sendProfessionalNotification(
-        appointment,
-        templateName,
-        successMessage,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Erro ao enviar WhatsApp ${templateName} para consulta ${appointmentId}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
-        error instanceof Error ? error.stack : '',
-      );
-    }
-  }
-
-  private getProfessionalNotificationSkipReason(
-    appointment: Appointment,
-  ): string | null {
-    if (!appointment.user?.telephone?.trim()) {
-      return 'profissional sem telefone cadastrado';
-    }
-
-    if (!appointment.user?.whatsAppToken || !appointment.user?.whatsAppId) {
-      return 'credenciais WhatsApp não configuradas';
-    }
-
-    if (!appointment.medicalRecord?.client?.name?.trim()) {
-      return 'paciente sem nome cadastrado';
-    }
-
-    if (!appointment.user?.name?.trim()) {
-      return 'profissional sem nome cadastrado';
-    }
-
-    return null;
-  }
-
   private async sendReminderMessage(appointment: Appointment) {
     try {
       if (appointment.reminderSentAt) {
@@ -308,7 +230,9 @@ export class CalendarReminderService {
     }
   }
 
-  private async ensureConfirmationToken(appointment: Appointment): Promise<void> {
+  private async ensureConfirmationToken(
+    appointment: Appointment,
+  ): Promise<void> {
     if (appointment.confirmationToken) {
       return;
     }
@@ -424,7 +348,7 @@ export class CalendarReminderService {
       appointment,
       templateName,
     );
-
+    console.log('Payload de notificação para o profissional:', payload);
     await this.whatsappService.sendTemplateMessage(
       {
         whatsappToken: appointment.user.whatsAppToken,
@@ -455,39 +379,23 @@ export class CalendarReminderService {
         appointment.user.name,
         appointment.medicalRecord!.client!.name,
         this.formatProfessionalAppointmentDate(appointment),
-        this.formatProfessionalAppointmentTimeRange(appointment),
+        this.formatProfessionalAppointmentTime(appointment),
       ],
     };
   }
 
-  private formatProfessionalAppointmentTimeRange(
-    appointment: Appointment,
-  ): string {
+  /** `{{4}}` dos templates confirmar/cancelar_agendamento — ex.: `19:00`. */
+  private formatProfessionalAppointmentTime(appointment: Appointment): string {
     const startDate = appointment.startDate
       ? new Date(appointment.startDate)
       : new Date(appointment.updatedAt);
 
-    const endDate = appointment.endDate
-      ? new Date(appointment.endDate)
-      : startDate;
-
-    const startTime = startDate.toLocaleTimeString('pt-BR', {
+    return startDate.toLocaleTimeString('pt-BR', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
       timeZone: 'America/Sao_Paulo',
     });
-
-    const endTime = endDate.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'America/Sao_Paulo',
-    });
-
-    const endTimeCompact = endTime.replace(':', 'h');
-
-    return `${startTime} às ${endTimeCompact}`;
   }
 
   private formatProfessionalAppointmentDate(appointment: Appointment): string {

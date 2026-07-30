@@ -7,7 +7,7 @@ export async function findAllWithQueryBuilder<T>(
   repository: Repository<T>,
   queryParams: FilterDto,
   alias: string,
-  options?: { excludeStatuses?: string[] },
+  options?: { excludeStatuses?: string[]; userId?: number },
 ): Promise<IPaginate<T> | T[]> {
   const {
     current_page = 1,
@@ -16,6 +16,13 @@ export async function findAllWithQueryBuilder<T>(
     limit,
   } = { ...queryParams };
   const queryBuilder = repository.createQueryBuilder(alias);
+
+  // `scopedUserId` evita colisão com um filtro `userId` vindo do queryParams.
+  if (options?.userId) {
+    queryBuilder.andWhere(`${alias}.userId = :scopedUserId`, {
+      scopedUserId: options.userId,
+    });
+  }
 
   queryBuild(queryBuilder, queryParams, alias);
 

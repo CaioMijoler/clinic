@@ -58,16 +58,17 @@ export class CalendarService {
         });
 
         if (!client) {
-          throw new NotFoundException(
-            'Não conseguimos encontrar o paciente.',
-          );
+          throw new NotFoundException('Não conseguimos encontrar o paciente.');
         }
 
         let medicalRecord: MedicalRecord | null = null;
 
         if (createCalendarDto.medicalRecordId) {
           medicalRecord = await manager.findOne(MedicalRecord, {
-            where: { id: createCalendarDto.medicalRecordId, userId: userAuth.id },
+            where: {
+              id: createCalendarDto.medicalRecordId,
+              userId: userAuth.id,
+            },
           });
 
           if (!medicalRecord) {
@@ -96,7 +97,9 @@ export class CalendarService {
           );
         }
 
-        const serviceById = new Map(services.map((service) => [service.id, service]));
+        const serviceById = new Map(
+          services.map((service) => [service.id, service]),
+        );
 
         for (const item of createCalendarDto.services) {
           const service = serviceById.get(item.serviceId);
@@ -121,7 +124,9 @@ export class CalendarService {
         }
 
         const startDate = new Date(createCalendarDto.start.dateTime);
-        const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+        const endDate = new Date(
+          startDate.getTime() + durationMinutes * 60 * 1000,
+        );
 
         const conflictingAppointment = await manager
           .createQueryBuilder(Appointment, 'appointment')
@@ -248,7 +253,8 @@ export class CalendarService {
       return appointments
         .filter(
           (appointment) =>
-            appointment.medicalRecord?.status !== MedicalRecordStatusEnum.CANCELED,
+            appointment.medicalRecord?.status !==
+            MedicalRecordStatusEnum.CANCELED,
         )
         .map((appointment) => this.mapToEventDto(appointment));
     } catch (error) {
@@ -412,13 +418,10 @@ export class CalendarService {
       await this.appointmentRepository.update(appointment.id, {
         attended,
         status: nextStatus,
-        ...(attended
-          ? {}
-          : { canceledBy: AppointmentCanceledByEnum.ADMIN }),
+        ...(attended ? {} : { canceledBy: AppointmentCanceledByEnum.ADMIN }),
       });
 
-      const clientName =
-        appointment.medicalRecord?.client?.name ?? 'paciente';
+      const clientName = appointment.medicalRecord?.client?.name ?? 'paciente';
 
       await this.notificationService.create({
         description: attended
@@ -448,8 +451,7 @@ export class CalendarService {
   }
 
   async getConfirmationPreview(urlSafeToken: string) {
-    const appointment =
-      await this.findAppointmentByUrlSafeToken(urlSafeToken);
+    const appointment = await this.findAppointmentByUrlSafeToken(urlSafeToken);
 
     const startDate = appointment.startDate
       ? new Date(appointment.startDate)
@@ -474,8 +476,7 @@ export class CalendarService {
   async confirmAttendanceByLink(
     urlSafeToken: string,
   ): Promise<{ success: boolean; message: string }> {
-    const appointment =
-      await this.findAppointmentByUrlSafeToken(urlSafeToken);
+    const appointment = await this.findAppointmentByUrlSafeToken(urlSafeToken);
     const { appointmentId, uuid } = this.decryptConfirmationPayload(
       appointment.confirmationToken!,
     );
@@ -486,8 +487,7 @@ export class CalendarService {
   async cancelAttendanceByLink(
     urlSafeToken: string,
   ): Promise<{ success: boolean; message: string }> {
-    const appointment =
-      await this.findAppointmentByUrlSafeToken(urlSafeToken);
+    const appointment = await this.findAppointmentByUrlSafeToken(urlSafeToken);
     const { appointmentId, uuid } = this.decryptConfirmationPayload(
       appointment.confirmationToken!,
     );
@@ -539,9 +539,20 @@ export class CalendarService {
         userId: appointment.userId,
       });
 
-      void this.calendarReminderService.sendProfessionalAppointmentConfirmedSilently(
-        appointment.id,
-      );
+      // Rota pública (link do paciente): o profissional vem do próprio
+      // agendamento. Falha no WhatsApp não pode impedir a confirmação.
+      void this.calendarReminderService
+        .notifyProfessionalAppointmentConfirmed(
+          appointment.id,
+          appointment.userId,
+        )
+        .catch((error) =>
+          Logger.warn(
+            `Falha ao notificar profissional sobre a confirmação da consulta ${appointment.id}: ${
+              error instanceof Error ? error.message : 'Erro desconhecido'
+            }`,
+          ),
+        );
 
       return {
         success: true,
@@ -603,9 +614,20 @@ export class CalendarService {
         userId: appointment.userId,
       });
 
-      void this.calendarReminderService.sendProfessionalAppointmentCanceledSilently(
-        appointment.id,
-      );
+      // Rota pública (link do paciente): o profissional vem do próprio
+      // agendamento. Falha no WhatsApp não pode impedir o cancelamento.
+      void this.calendarReminderService
+        .notifyProfessionalAppointmentCanceled(
+          appointment.id,
+          appointment.userId,
+        )
+        .catch((error) =>
+          Logger.warn(
+            `Falha ao notificar profissional sobre o cancelamento da consulta ${appointment.id}: ${
+              error instanceof Error ? error.message : 'Erro desconhecido'
+            }`,
+          ),
+        );
 
       return {
         success: true,
@@ -708,7 +730,9 @@ export class CalendarService {
     return 'pending';
   }
 
-  private mapToEventDto(appointment: Appointment): ResponseMedicalRecordResumeDto {
+  private mapToEventDto(
+    appointment: Appointment,
+  ): ResponseMedicalRecordResumeDto {
     const medicalRecord = appointment.medicalRecord;
     const services = appointment.medicalRecordServices ?? [];
     const quantitySessions =

@@ -12,6 +12,7 @@ import { UpdateTreatmentDto } from './dto/update-treatment.dto';
 import { Repository } from 'typeorm';
 import { Treatment } from './entities/treatment.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class TreatmentService {
@@ -22,9 +23,13 @@ export class TreatmentService {
 
   async create(
     createTreatmentDto: CreateTreatmentDto,
+    user: User,
   ): Promise<ResponseTreatmentDto> {
     try {
-      return await this.treatmentRepository.save(createTreatmentDto);
+      return await this.treatmentRepository.save({
+        ...createTreatmentDto,
+        userId: user.id,
+      });
     } catch (error) {
       const message = 'Ocorreu um erro ao criar o tratamento.';
 
@@ -38,21 +43,26 @@ export class TreatmentService {
     }
   }
 
-  async findAll(): Promise<ResponseTreatmentDto[]> {
-    return await this.treatmentRepository.find();
+  async findAll(user: User): Promise<ResponseTreatmentDto[]> {
+    return await this.treatmentRepository.find({
+      where: { userId: user.id },
+    });
   }
 
-  async findOne(id: number): Promise<ResponseTreatmentDto> {
-    return await this.treatmentRepository.findOne({ where: { id } });
+  async findOne(id: number, user: User): Promise<ResponseTreatmentDto> {
+    return await this.treatmentRepository.findOne({
+      where: { id, userId: user.id },
+    });
   }
 
   async update(
     id: number,
     updateTreatmentDto: UpdateTreatmentDto,
+    user: User,
   ): Promise<ResponseTreatmentDto> {
     try {
       let treatment = await this.treatmentRepository.findOne({
-        where: { id },
+        where: { id, userId: user.id },
       });
 
       if (!treatment) {
@@ -80,10 +90,10 @@ export class TreatmentService {
     }
   }
 
-  async remove(id: number) {
+  async remove(id: number, user: User) {
     try {
       const treatment = await this.treatmentRepository.findOne({
-        where: { id },
+        where: { id, userId: user.id },
       });
 
       if (!treatment) {

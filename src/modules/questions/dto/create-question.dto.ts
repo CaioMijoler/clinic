@@ -24,4 +24,11 @@ export class ResponseQuestionDto {
 
   @ApiProperty()
   response: string;
+
+  @ApiProperty({
+    example: 1,
+    nullable: true,
+    description: 'Profissional dono do registro.',
+  })
+  userId?: number;
 }

@@ -2,10 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { User } from '../../user/entities/user.entity';
 import { ClientAddress } from './client-address.entity';
 
 @Entity('clients')
@@ -38,6 +41,13 @@ export class Client {
   @Column({ type: 'varchar', length: 255, nullable: true })
   telephone: string;
 
+  @Column({
+    name: 'user_id',
+    type: 'int',
+    nullable: true,
+  })
+  userId?: number;
+
   @CreateDateColumn({
     name: 'created_at',
   })
@@ -50,4 +60,8 @@ export class Client {
 
   @OneToOne(() => ClientAddress, (address) => address.client, { cascade: true })
   clientAddress?: ClientAddress;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'user_id' })
+  user?: User;
 }

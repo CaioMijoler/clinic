@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { User } from '../../user/entities/user.entity';
 
 @Entity('treatment')
 export class Treatment {
@@ -27,6 +28,13 @@ export class Treatment {
   })
   medicalRecordId: number;
 
+  @Column({
+    name: 'user_id',
+    type: 'int',
+    nullable: true,
+  })
+  userId?: number;
+
   @CreateDateColumn({
     name: 'created_at',
   })
@@ -40,4 +48,8 @@ export class Treatment {
   @ManyToOne(() => MedicalRecord, (medical) => medical.pathologies)
   @JoinColumn({ name: 'medical_record_id' })
   medicalRecord: MedicalRecord;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'user_id' })
+  user?: User;
 }

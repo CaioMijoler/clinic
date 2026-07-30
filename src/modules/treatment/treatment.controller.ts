@@ -6,7 +6,9 @@ import {
   Param,
   Delete,
   Put,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { TreatmentService } from './treatment.service';
 import {
   CreateTreatmentDto,
@@ -24,30 +26,42 @@ export class TreatmentController {
   @Post()
   async create(
     @Body() createTreatmentDto: CreateTreatmentDto,
+    @Req() req: Request,
   ): Promise<ResponseTreatmentDto> {
-    return await this.treatmentService.create(createTreatmentDto);
+    return await this.treatmentService.create(
+      createTreatmentDto,
+      req?.user as any,
+    );
   }
 
   @Get()
-  async findAll(): Promise<ResponseTreatmentDto[]> {
-    return await this.treatmentService.findAll();
+  async findAll(@Req() req: Request): Promise<ResponseTreatmentDto[]> {
+    return await this.treatmentService.findAll(req?.user as any);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: number): Promise<ResponseTreatmentDto> {
-    return await this.treatmentService.findOne(id);
+  async findOne(
+    @Param('id') id: number,
+    @Req() req: Request,
+  ): Promise<ResponseTreatmentDto> {
+    return await this.treatmentService.findOne(id, req?.user as any);
   }
 
   @Put(':id')
   async update(
     @Param('id') id: number,
     @Body() updateTreatmentDto: UpdateTreatmentDto,
+    @Req() req: Request,
   ): Promise<ResponseTreatmentDto> {
-    return await this.treatmentService.update(id, updateTreatmentDto);
+    return await this.treatmentService.update(
+      id,
+      updateTreatmentDto,
+      req?.user as any,
+    );
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: number) {
-    return await this.treatmentService.remove(id);
+  async remove(@Param('id') id: number, @Req() req: Request) {
+    return await this.treatmentService.remove(id, req?.user as any);
   }
 }

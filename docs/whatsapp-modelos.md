@@ -2,9 +2,12 @@
 
 Documentação dos templates aprovados na Meta e dos parâmetros enviados pelo backend (`CalendarReminderService`).
 
-**Idioma:** `pt_BR`  
-**Credenciais:** `whatsAppId` e `whatsAppToken` do usuário logado (profissional)  
+**Credenciais:** `whatsAppId` e `whatsAppToken` do profissional dono do agendamento (`appointment.user`)  
 **Telefone:** apenas dígitos com DDI, sem `+` (ex: `5516999737133`)
+
+**Idioma:** os payloads montam `languageCode: 'pt_BR'`, mas `WhatsappService.sendTemplateMessage`
+envia `language: { code: 'en' }` fixo — o campo do DTO é ignorado. Os templates precisam estar
+registrados na Meta sob **English**, senão a API responde `#132001`.
 
 ---
 
@@ -65,9 +68,9 @@ O prontuário já está atualizado no sistema.
 | `{{1}}` | Nome do doutor | `user.name` | Paulo |
 | `{{2}}` | Nome do paciente | `client.name` | Caio |
 | `{{3}}` | Data do agendamento | `startDate` (dia + mês por extenso) | 23 de janeiro |
-| `{{4}}` | Intervalo de horário | `startDate` e `endDate` | 19:00 às 19h20 |
+| `{{4}}` | Horário de início | `startDate` | 19:00 |
 
-**Formato de `{{4}}`:** `{início} às {fim}` — início com `:` (ex: `19:00`), fim com `h` (ex: `19h20`). Fuso: `America/Sao_Paulo`.
+**Formato de `{{4}}`:** `HH:mm` (24h), fuso `America/Sao_Paulo`.
 
 ---
 
@@ -97,7 +100,7 @@ O horário já foi liberado no sistema para novos encaixes.
 | `{{1}}` | Nome do doutor | `user.name` | Paulo |
 | `{{2}}` | Nome do paciente | `client.name` | Caio |
 | `{{3}}` | Data do agendamento | `startDate` (dia + mês por extenso) | 23 de janeiro |
-| `{{4}}` | Intervalo de horário | `startDate` e `endDate` | 19:00 às 19h20 |
+| `{{4}}` | Horário de início | `startDate` | 19:00 |
 
 **Formato de `{{4}}`:** igual ao `confirmar_agendamento`.
 
@@ -120,10 +123,13 @@ Quando o **cliente** confirma ou cancela pelo link ou API pública, o WhatsApp a
 |--------------------|----------|----------------------------------|
 | Confirma presença (link) | `POST /v1/calendar/confirmation/:urlSafeToken/confirm` | `confirmar_agendamento` |
 | Cancela (link) | `POST /v1/calendar/confirmation/:urlSafeToken/cancel` | `cancelar_agendamento` |
-| Confirma (token no body) | `POST /v1/calendar/:medicalRecordId/confirm-attendance` | `confirmar_agendamento` |
-| Cancela (token no body) | `POST /v1/calendar/:medicalRecordId/cancel-attendance` | `cancelar_agendamento` |
+| Confirma (token no body) | `POST /v1/calendar/:appointmentId/confirm-attendance` | `confirmar_agendamento` |
+| Cancela (token no body) | `POST /v1/calendar/:appointmentId/cancel-attendance` | `cancelar_agendamento` |
 
-Implementação: `CalendarService.confirmAttendance` e `CalendarService.cancelAttendance` → `CalendarReminderService.sendProfessionalAppointment*Silently`.
+Implementação: `CalendarService.confirmAttendance` e `CalendarService.cancelAttendance` →
+`CalendarReminderService.notifyProfessionalAppointmentConfirmed` / `...Canceled`, chamados com
+`appointment.userId` (as rotas são públicas, não há usuário autenticado) e com `.catch()` que apenas
+registra `warn` — o retorno ao paciente não depende do WhatsApp.
 
 ## Envio manual / outros
 
@@ -139,6 +145,7 @@ Implementação: `CalendarService.confirmAttendance` e `CalendarService.cancelAt
 |--------|-------|
 | `#131030` | Número fora da lista de permissão (modo teste Meta) |
 | `#132000` | Quantidade de parâmetros diferente do template aprovado |
+| `#132001` | Template não existe no idioma enviado (o serviço envia `en` fixo) |
 
 ## Referência no código
 

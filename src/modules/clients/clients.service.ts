@@ -13,6 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ClientResponseDto } from './dto/client-response.dto';
 import { findAllWithQueryBuilder } from '../../utils/query-builder';
 import { IPaginate } from '../../utils/paginate';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class ClientsService {
@@ -21,10 +22,13 @@ export class ClientsService {
     private readonly clientRepository: Repository<Client>,
   ) {}
 
-  async create(createClientDto: CreateClientDto): Promise<ClientResponseDto> {
+  async create(
+    createClientDto: CreateClientDto,
+    user: User,
+  ): Promise<ClientResponseDto> {
     try {
       const clientExists = await this.clientRepository.findOne({
-        where: { email: createClientDto.email },
+        where: { email: createClientDto.email, userId: user.id },
       });
 
       if (clientExists) {
@@ -33,7 +37,10 @@ export class ClientsService {
         );
       }
 
-      return await this.clientRepository.save(createClientDto);
+      return await this.clientRepository.save({
+        ...createClientDto,
+        userId: user.id,
+      });
     } catch (error) {
       const message = 'Ocorreu um erro ao criar o cliente.';
 
@@ -47,7 +54,10 @@ export class ClientsService {
     }
   }
 
-  async findAll(queryParams: FilterDto): Promise<IPaginate<Client> | Client[]> {
+  async findAll(
+    queryParams: FilterDto,
+    user: User,
+  ): Promise<IPaginate<Client> | Client[]> {
     try {
       const params = { ...queryParams };
       if (params.relations) {
@@ -62,6 +72,7 @@ export class ClientsService {
         this.clientRepository,
         params,
         'client',
+        { userId: user.id },
       );
     } catch (error) {
       const message = 'Ocorreu um erro ao buscar os clientes.';
@@ -70,9 +81,9 @@ export class ClientsService {
     }
   }
 
-  async findOne(id: number): Promise<Client> {
+  async findOne(id: number, user: User): Promise<Client> {
     return await this.clientRepository.findOne({
-      where: { id },
+      where: { id, userId: user.id },
       relations: { clientAddress: true },
     });
   }
@@ -80,10 +91,11 @@ export class ClientsService {
   async update(
     id: number,
     updateClientDto: UpdateClientDto,
+    user: User,
   ): Promise<ClientResponseDto> {
     try {
       let client = await this.clientRepository.findOne({
-        where: { id },
+        where: { id, userId: user.id },
         relations: { clientAddress: true },
       });
 
@@ -116,10 +128,10 @@ export class ClientsService {
     }
   }
 
-  async remove(id: number) {
+  async remove(id: number, user: User) {
     try {
       const client = await this.clientRepository.findOne({
-        where: { id },
+        where: { id, userId: user.id },
       });
 
       if (!client) {

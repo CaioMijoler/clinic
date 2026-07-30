@@ -30,4 +30,11 @@ export class ResponseTreatmentDto {
 
   @ApiProperty()
   medicalRecordId: number;
+
+  @ApiProperty({
+    example: 1,
+    nullable: true,
+    description: 'Profissional responsável pelo tratamento.',
+  })
+  userId?: number;
 }
